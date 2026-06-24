@@ -1,0 +1,20 @@
+
+> glimacy@6.0.0 dev
+> vite --host 127.0.0.1 --port 3002 --strictPort
+
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m672[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m3002[22m/[39m
+[2m10:09:41 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Login.jsx, /src/index.css[22m
+[2m10:12:51 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Login.jsx, /src/index.css[22m
+[2m10:13:53 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/index.css[22m
+[2m10:14:07 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/index.css[22m
+[2m10:19:44 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/App.jsx, /src/components/ui/Login.jsx[22m
+[2m10:20:03 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Login.jsx, /src/index.css[22m
+[2m10:20:20 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/index.css[22m
+[2m10:20:27 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/index.css[22m
+[2m10:20:44 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/index.css[22m
+[2m11:37:21 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/CreatePostModal.jsx, /src/index.css[22m
+[2m11:45:04 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/CreatePostModal.jsx, /src/index.css[22m
+[2m12:30:53 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/index.css[22m
