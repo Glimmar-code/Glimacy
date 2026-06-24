@@ -34,7 +34,7 @@ import ConnectHubView                                from "./components/features
 import NotificationsView                             from "./components/features/Notifications/NotificationsView";
 import Leaderboard                                   from "./components/features/leaderboard/Leaderboard";
 import LeaderboardHeader                             from "./components/features/leaderboard/LeaderboardHeader";
-import MessagesView                                  from "./components/features/messages/MessagesView";
+import MessagesView                                  from "./components/features/Messages/MessagesView";
 import ProfileView                                   from "./components/features/Profile/Profile";
 
 // ─── BRAND: BLACK · DEEP PURPLE · WHITE  ─────────────────────────────────────
@@ -1797,18 +1797,27 @@ export default function App() {
 
       {/* ── 5-TAB BOTTOM NAV ── */}
       {!isOnProfile && (
-        <div style={{
-          position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)",
-          width:"100%", maxWidth:430,
-          background:T.isDark?"rgba(0,0,12,0.97)":"rgba(240,238,255,0.97)",
-          backdropFilter:"blur(16px)", borderTop:`1px solid ${PURPLE_BD}`,
-          display:"flex", justifyContent:"space-around", padding:"8px 0 18px", zIndex:40,
-          opacity:headerVisible?1:0, transform:headerVisible?"translateX(-50%) translateY(0)":"translateX(-50%) translateY(14px)",
-          pointerEvents:headerVisible?"auto":"none", transition:"opacity 0.3s ease,transform 0.3s ease",
-        }}>
-          {BOTTOM_NAV.map(({ id, Icon, label }) => {
-            const isActive = activeTab === id;
-            return (
+       <div style={{
+  position: "fixed", 
+  bottom: 0, 
+  left: "50%", 
+  width: "100%", 
+  maxWidth: 430,
+  background: T.isDark ? "rgba(0,0,12,0.97)" : "rgba(240,238,255,0.97)",
+  backdropFilter: "blur(16px)", 
+  borderTop: `1px solid ${PURPLE_BD}`,
+  display: "flex", 
+  justifyContent: "space-around", 
+  padding: "8px 0 18px", 
+  zIndex: 40,
+  opacity: headerVisible ? 1 : 0, 
+  transform: headerVisible ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(14px)",
+  pointerEvents: headerVisible ? "auto" : "none", 
+  transition: "opacity 0.3s ease, transform 0.3s ease",
+}}>
+  {BOTTOM_NAV.map(({ id, Icon, label }) => {
+    const isActive = activeTab === id;
+    return (
               <div key={id} onClick={() => { setActiveTab(id); if(id==="profile")setViewingProfileId(null); }}
                 style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2, color:isActive?PURPLE:T.muted, cursor:"pointer", flex:1, transition:"color 0.2s,transform 0.15s", transform:isActive?"translateY(-1px)":"translateY(0)" }}>
                 <div style={{ ...(isActive?{filter:`drop-shadow(0 0 6px ${PURPLE_GLOW})`}:{}), position:"relative" }}>
