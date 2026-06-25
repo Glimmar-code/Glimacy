@@ -1,9 +1,13 @@
 /**
  * App.jsx  — Glimacy v2 (Full Rewrite)
- * Colors: BLACK · DEEP PURPLE · WHITE (Spotify Feel)
- * Verified Badges:
- * — Blue tick: Premium/Pro flow
- * — White tick: Campus Elite requirements met
+ * Colors: BLACK · DEEP PURPLE · WHITE  (Spotify feel — zero light-purple/pink)
+ * Header: Search · Feedback · Settings · Messages  (4 top-right icons)
+ * Verified:
+ * — Blue  tick : existing token/card flow (Premium/Pro)
+ * — White tick : ₦2,500 OR 10,000 tokens  +  20 verified followers  +  50 posts
+ * All posts are public & appear on the creator's profile (posts / liked / saved)
+ * handleSaveProfile: full upsert to Supabase profiles table
+ * Season Rewards section in Ranking (cash prizes — coming soon banner)
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -33,7 +37,7 @@ import LeaderboardHeader                             from "./components/features
 import MessagesView                                  from "./components/features/Messages/MessagesView";
 import ProfileView                                   from "./components/features/Profile/Profile";
 
-// ─── BRAND CONFIGURATION ─────────────────────────────────────────────────────
+// ─── BRAND: BLACK · DEEP PURPLE · WHITE  ─────────────────────────────────────
 export const PURPLE       = "#7C3AED";   // deep purple (primary accent)
 export const PURPLE_DIM   = "rgba(124,58,237,0.14)";
 export const PURPLE_BD    = "rgba(124,58,237,0.32)";
@@ -49,7 +53,7 @@ export const GOLD_BRIGHT  = "#9B5BFA";
 export const GOLD_DIM     = PURPLE_DIM;
 export const GOLD_BORDER  = PURPLE_BD;
 export const GOLD_GLOW    = PURPLE_GLOW;
-export const BRAND_GRAD   = `linear-gradient(135deg, ${PURPLE}, #5B21B6)`;
+export const BRAND_GRAD   = `linear-gradient(135deg,${PURPLE},#5B21B6)`;
 
 export const accent       = () => PURPLE;
 export const accentDim    = () => PURPLE_DIM;
@@ -74,20 +78,20 @@ export const TOKEN_ECONOMY = {
   whiteMinPosts:     50,
 };
 
-// ─── THEMES ──────────────────────────────────────────────────────────────────
+// ─── THEMES  ─────────────────────────────────────────────────────────────────
 const THEMES = {
   glimacy: {
     id: "glimacy", label: "Dark Mode",
     bg: OFF_BLACK, surface: CARD_BLACK,
     cardBg: "rgba(124,58,237,0.07)",
     cardBorder: PURPLE_BD,
-    cardShadow: "0 4px 32px rgba(0,0,0,0.75), inset 0 1px 0 rgba(124,58,237,0.08)",
+    cardShadow: "0 4px 32px rgba(0,0,0,0.75),inset 0 1px 0 rgba(124,58,237,0.08)",
     text: OFF_WHITE, muted: "#7B6E99", mutedMid: "#A089C8",
     inputBg: "rgba(124,58,237,0.09)", inputBorder: "rgba(124,58,237,0.22)",
     pillBorder: "rgba(124,58,237,0.14)", divider: "rgba(124,58,237,0.12)",
     hoverBg: "rgba(124,58,237,0.10)", sentBg: PURPLE, sentText: "#fff",
     recvBg: "rgba(255,255,255,0.06)", recvText: OFF_WHITE,
-    coverGrad: `linear-gradient(135deg, ${OFF_BLACK}, #1A0030, ${OFF_BLACK})`,
+    coverGrad: `linear-gradient(135deg,${OFF_BLACK},#1A0030,${OFF_BLACK})`,
     isDark: true,
   },
   light: {
@@ -101,7 +105,7 @@ const THEMES = {
     pillBorder: "rgba(124,58,237,0.14)", divider: "rgba(124,58,237,0.10)",
     hoverBg: "rgba(124,58,237,0.06)", sentBg: PURPLE, sentText: "#fff",
     recvBg: "rgba(0,0,0,0.05)", recvText: "#0A0012",
-    coverGrad: "linear-gradient(135deg, #F0EEFF, #DDD4FF, #F0EEFF)",
+    coverGrad: "linear-gradient(135deg,#F0EEFF,#DDD4FF,#F0EEFF)",
     isDark: false,
   },
 };
@@ -115,7 +119,7 @@ export const glass = (T, extra = {}) => ({
   ...extra,
 });
 
-// ─── CONSTANTS & MOCK DATA ───────────────────────────────────────────────────
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const FUTA_FACULTIES = ["SESE","SIMME","SLS","SOC","SPS","SAAT","SBMS","SLIT","SEMS","SET"];
 
 const MOCK_USER = {
@@ -123,14 +127,14 @@ const MOCK_USER = {
   verifiedType: null,
   bio: "Building the future, one commit at a time 🚀",
   university: "Federal University of Technology, Akure (FUTA)",
-  faculty: "SLIT", gender: "Male", tokens: 520,
-  posts: 54, followers_count: 24, following_count: 18,
+  faculty: "SLIT", gender: "Male", tokens: 80,
+  posts: 127, followers_count: 0, following_count: 0,
   worldRank: 47, campusRank: 12, score: 2100,
   isOnline: true, lastSeen: null,
   relationshipStatus: "Single",
   phone: "8012345678",
   website: "https://glimacy.com",
-  hobby: "Coding and interface modeling",
+  hobby: "I love coding and building things",
   seed: "GD", avatarUrl: null, coverUrl: null,
 };
 
@@ -164,11 +168,11 @@ const INITIAL_FEED_POSTS = [
   { id:"fp1", authorId:"u1", author:"Chinedu Okafor", handle:"@chinedu_dev",
     seed:"CO", time:"3h", type:"text",
     content:"Building in public is the fastest way to level up. Ship early, iterate fast 🚀 #OpenSource",
-    likes:319, likedBy: ["Amina Yusuf"], comments:[], reposts:44, saves:12, views:2100, liked:false, saved:false, reposted:false },
+    likes:319, comments:[], reposts:44, saves:12, views:2100, liked:false, saved:false, reposted:false },
   { id:"fp2", authorId:"u2", author:"Amina Yusuf", handle:"@amina_tech",
     seed:"AY", time:"5h", type:"text",
     content:"AI is not replacing you. A human using AI is. Stay ahead, keep learning 🤖✨ #UNILAG #Tech",
-    likes:512, likedBy: ["Chinedu Okafor"], comments:[], reposts:88, saves:34, views:4100, liked:false, saved:false, reposted:false },
+    likes:512, comments:[], reposts:88, saves:34, views:4100, liked:false, saved:false, reposted:false },
 ];
 
 const MOCK_NOTIFICATIONS = [
@@ -196,15 +200,18 @@ const AD_TIERS = [
 ];
 
 const tokenCost  = (naira) => Math.ceil(naira / 2);
-let _uidN = 0;
-const uid = (prefix = "id") => `${prefix}_${Date.now()}_${_uidN++}`;
-const STATUS_BG_PRESETS = [
-  `linear-gradient(135deg, ${PURPLE}, #3B0090)`,
-  "linear-gradient(135deg, #000000, #1A0030)",
-  "linear-gradient(135deg, #1A0030, #4C1D95)",
-  "linear-gradient(135deg, #000000, #2D0050)",
-  `linear-gradient(135deg, #5B21B6, ${PURPLE})`,
-];
+
+const LS_KEYS = {
+  myStatuses:      "glimacy_my_status_items_v2",
+  seenStatusItems: "glimacy_seen_status_items_v2",
+  savedArchive:    "glimacy_saved_posts_v2",
+  likedIds:        "glimacy_liked_post_ids_v2",
+  feedPosts:       "glimacy_feed_posts_v2",
+  videoPosts:      "glimacy_video_posts_v2",
+  userScore:       "glimacy_user_score_v2",
+  statusLikes:     "glimacy_status_likes_v2",
+  statusViews:     "glimacy_status_views_v2",
+};
 
 const POINT_ACTIONS = {
   LIKE_POST:     3,
@@ -214,8 +221,35 @@ const POINT_ACTIONS = {
   VIEW_STATUS:   1,
   FOLLOW:        2,
   LIKE_STATUS:   2,
+  RECEIVED_LIKE: 2,
 };
 
+const loadLS = (key, fallback) => {
+  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+  catch { return fallback; }
+};
+const saveLS = (key, value) => {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+};
+
+let _uidN = 0;
+const uid = (prefix = "id") => `${prefix}_${Date.now()}_${_uidN++}`;
+const STATUS_TTL_MS     = 24 * 60 * 60 * 1000;
+const STATUS_BG_PRESETS = [
+  `linear-gradient(135deg,${PURPLE},#3B0090)`,
+  "linear-gradient(135deg,#000000,#1A0030)",
+  "linear-gradient(135deg,#1A0030,#4C1D95)",
+  "linear-gradient(135deg,#000000,#2D0050)",
+  `linear-gradient(135deg,#5B21B6,${PURPLE})`,
+  "linear-gradient(135deg,#1E0040,#6D28D9)",
+];
+const STATUS_SAMPLE_LINES = [
+  "Campus life hits different today 🌞",
+  "Grinding through assignments 📚🔥",
+  "Big things coming soon... stay tuned 👀",
+  "FUTA till I die 🟢⚪",
+  "Coffee + Code = ❤️",
+];
 const timeAgo = (ts) => {
   const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60000);
@@ -226,7 +260,7 @@ const timeAgo = (ts) => {
   return `${Math.floor(hrs / 24)}d ago`;
 };
 
-// ─── 1. GLIMACY BADGE & ACTION BANNER BUTTONS ────────────────────────────────
+// ─── VERIFIED BADGE (Blue or White) ──────────────────────────────────────────
 export const GlimacyBadge = ({ type = "blue", size = 15 }) => {
   const isWhite = type === "white";
   return (
@@ -244,10 +278,198 @@ export const GlimacyBadge = ({ type = "blue", size = 15 }) => {
           ? "0 0 10px rgba(255,255,255,0.8)"
           : `0 0 10px ${PURPLE_GLOW}`,
       }}
-    >?</div>
+    >✓</div>
   );
 };
 
+// ─── VERIFY MODAL  ────────────────────────────────────────────────────────────
+const VerifyModal = React.memo(({ T, tokens, user, onClose, onVerified, onEarnedTokens }) => {
+  const [tab,          setTab]          = useState("blue");
+  const [step,         setStep]         = useState("options");
+  const [adCount,      setAdCount]      = useState(0);
+  const [watchProgress,setWatchProgress]= useState(0);
+  const timerRef = useRef(null);
+
+  const userPostCount     = user?.posts || 0;
+  const verifiedFollowers = 0; 
+  const canWhite          = verifiedFollowers >= TOKEN_ECONOMY.whiteMinFollowers && userPostCount >= TOKEN_ECONOMY.whiteMinPosts;
+  const canWhiteTokens    = tokens >= TOKEN_ECONOMY.whiteTokenCost && canWhite;
+  const canBlueTokens     = tokens >= TOKEN_ECONOMY.tokensToVerify;
+
+  const watchAd = () => {
+    setStep("watchingAd"); setWatchProgress(0);
+    let p = 0;
+    timerRef.current = setInterval(() => {
+      p += 2; setWatchProgress(p);
+      if (p >= 100) {
+        clearInterval(timerRef.current);
+        setAdCount(c => c + 1);
+        onEarnedTokens(TOKEN_ECONOMY.tokensPerAd);
+        setStep("watchAd");
+      }
+    }, 60);
+  };
+  useEffect(() => () => clearInterval(timerRef.current), []);
+
+  const baseStyle = {
+    position:"fixed", inset:0, zIndex:200, display:"flex", justifyContent:"center",
+    alignItems:"center", background:"rgba(0,0,0,0.88)", backdropFilter:"blur(12px)", padding:16,
+  };
+  const boxStyle = {
+    background: T.isDark ? "#0A0012" : "#fff",
+    border: `1px solid ${PURPLE_BD}`,
+    boxShadow: `0 0 60px ${PURPLE_GLOW}`,
+    width: 330, borderRadius: 24, padding: 28, position:"relative", textAlign:"center",
+  };
+
+  return (
+    <div style={baseStyle}>
+      <div style={boxStyle}>
+        <button onClick={onClose} style={{ position:"absolute", top:14, right:14, background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={18}/></button>
+        {/* Modal Logic Remains the Same */}
+        {step === "options" && (
+          <>
+            <div style={{ display:"flex", gap:8, marginBottom:18 }}>
+              {["blue","white"].map(t => (
+                <button key={t} onClick={() => setTab(t)} style={{
+                  flex:1, padding:"9px 0", borderRadius:12, border:`2px solid ${tab===t?PURPLE:T.inputBorder}`,
+                  background: tab===t ? PURPLE_DIM : "transparent",
+                  color: tab===t ? WHITE : T.muted, fontWeight:700, fontSize:13, cursor:"pointer",
+                }}>
+                  <GlimacyBadge type={t} size={13}/>&nbsp; {t === "blue" ? "Blue Verified" : "White Verified"}
+                </button>
+              ))}
+            </div>
+
+            {tab === "blue" && (
+              <>
+                <div style={{ fontSize:36, marginBottom:8 }}>🔵</div>
+                <h3 style={{ margin:"0 0 4px", fontSize:17, fontWeight:800, color:PURPLE }}>Blue Verified</h3>
+                <p style={{ margin:"0 0 16px", fontSize:12, color:T.muted }}>Premium / Pro — use 500 tokens or pay ₦500</p>
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  {canBlueTokens ? (
+                    <button onClick={() => { onVerified("blue_tokens"); onClose(); }} style={{ padding:13, borderRadius:12, border:"none", background:PURPLE, color:WHITE, fontWeight:800, fontSize:13, cursor:"pointer" }}>
+                      🪙 Use 500 Tokens
+                    </button>
+                  ) : (
+                    <button onClick={() => setStep("watchAd")} style={{ padding:13, borderRadius:12, border:`1.5px solid ${PURPLE_BD}`, background:PURPLE_DIM, color:PURPLE, fontWeight:700, fontSize:13, cursor:"pointer" }}>
+                      📺 Earn Tokens (need {TOKEN_ECONOMY.tokensToVerify - tokens} more)
+                    </button>
+                  )}
+                  <button onClick={() => setStep("cardPay")} style={{ padding:13, borderRadius:12, border:"none", background:PURPLE, color:WHITE, fontWeight:800, fontSize:13, cursor:"pointer" }}>
+                    💳 Pay ₦{TOKEN_ECONOMY.cardVerifyPrice.toLocaleString()}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {tab === "white" && (
+              <>
+                <div style={{ fontSize:36, marginBottom:8 }}>⚪</div>
+                <h3 style={{ margin:"0 0 4px", fontSize:17, fontWeight:800, color:WHITE }}>White Verified</h3>
+                <p style={{ margin:"0 0 8px", fontSize:12, color:T.muted }}>Campus Elite status — requirements:</p>
+                <div style={{ background:PURPLE_DIM, border:`1px solid ${PURPLE_BD}`, borderRadius:12, padding:"10px 14px", marginBottom:14, textAlign:"left" }}>
+                  {[
+                    [`At least 20 verified followers`, verifiedFollowers >= 20],
+                    [`At least 50 posts made`,         userPostCount >= 50],
+                    [`Pay ₦2,500 OR 10,000 tokens`,    true],
+                  ].map(([label, met]) => (
+                    <div key={label} style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color: met ? "#22c55e" : T.muted, padding:"3px 0" }}>
+                      <span>{met ? "✅" : "❌"}</span> {label}
+                    </div>
+                  ))}
+                </div>
+                {!canWhite && (
+                  <p style={{ fontSize:11, color:"#ef4444", marginBottom:12 }}>
+                    Requirements not met yet — keep posting and building followers!
+                  </p>
+                )}
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  <button
+                    disabled={!canWhiteTokens}
+                    onClick={() => canWhiteTokens && (onVerified("white_tokens"), onClose())}
+                    style={{ padding:13, borderRadius:12, border:"none", background:canWhiteTokens ? PURPLE : T.inputBg, color:canWhiteTokens ? WHITE : T.muted, fontWeight:800, fontSize:13, cursor:canWhiteTokens?"pointer":"default" }}
+                  >
+                    🪙 Use 10,000 Tokens
+                  </button>
+                  <button
+                    disabled={!canWhite}
+                    onClick={() => canWhite && setStep("cardPayWhite")}
+                    style={{ padding:13, borderRadius:12, border:"none", background:canWhite ? PURPLE : T.inputBg, color:canWhite ? WHITE : T.muted, fontWeight:800, fontSize:13, cursor:canWhite?"pointer":"default" }}
+                  >
+                    💳 Pay ₦2,500
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {(step === "watchAd" || step === "watchingAd") && (
+          <>
+            <div style={{ fontSize:44, marginBottom:10 }}>📺</div>
+            <h3 style={{ margin:"0 0 6px", fontSize:17, fontWeight:800, color:PURPLE }}>
+              {step === "watchingAd" ? "Ad Playing…" : "Earn Tokens"}
+            </h3>
+            {step === "watchingAd" ? (
+              <>
+                <div style={{ height:9, borderRadius:99, background:T.divider, overflow:"hidden", margin:"14px 0 10px" }}>
+                  <div style={{ height:"100%", width:`${watchProgress}%`, background:PURPLE, borderRadius:99, transition:"width 0.06s linear" }}/>
+                </div>
+                <p style={{ fontSize:12, color:T.muted }}>{watchProgress}%</p>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize:12, color:T.muted, marginBottom:14 }}>You have <strong style={{ color:PURPLE }}>{tokens}</strong> tokens. Ads watched: {adCount}</p>
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  <button onClick={watchAd} style={{ padding:13, borderRadius:12, border:"none", background:PURPLE, color:WHITE, fontWeight:800, fontSize:13, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                    <PlayCircle size={17}/> Watch Ad (+{TOKEN_ECONOMY.tokensPerAd} tokens)
+                  </button>
+                  <button onClick={() => setStep("options")} style={{ padding:11, borderRadius:12, border:`1px solid ${T.inputBorder}`, background:"transparent", color:T.muted, fontWeight:600, fontSize:12, cursor:"pointer" }}>
+                    ← Back
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {(step === "cardPay" || step === "cardPayWhite") && (() => {
+          const isWhitePay = step === "cardPayWhite";
+          const price = isWhitePay ? TOKEN_ECONOMY.whiteNairaCost : TOKEN_ECONOMY.cardVerifyPrice;
+          return (
+            <>
+              <div style={{ fontSize:40, marginBottom:8 }}>💳</div>
+              <h3 style={{ margin:"0 0 4px", fontSize:17, fontWeight:800, color:PURPLE }}>Pay ₦{price.toLocaleString()}</h3>
+              <p style={{ fontSize:12, color:T.muted, marginBottom:14 }}>
+                One-time payment for {isWhitePay ? "White" : "Blue"} Verified
+              </p>
+              <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:14 }}>
+                {[["Card Number","•••• •••• •••• 0000"],["Expiry","MM / YY"],["CVV","•••"]].map(([label,ph]) => (
+                  <div key={label} style={{ textAlign:"left" }}>
+                    <div style={{ fontSize:11, color:T.muted, marginBottom:4 }}>{label}</div>
+                    <input placeholder={ph} style={{ width:"100%", padding:"9px 12px", borderRadius:9, background:T.inputBg, border:`1px solid ${PURPLE_BD}`, color:T.text, outline:"none", fontSize:13 }}/>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                <button onClick={() => { onVerified(isWhitePay ? "white_card" : "blue_card"); onClose(); }}
+                  style={{ padding:13, borderRadius:12, border:"none", background:PURPLE, color:WHITE, fontWeight:800, fontSize:13, cursor:"pointer" }}>
+                  Pay ₦{price.toLocaleString()} Now
+                </button>
+                <button onClick={() => setStep("options")} style={{ padding:11, borderRadius:12, border:`1px solid ${T.inputBorder}`, background:"transparent", color:T.muted, fontWeight:600, fontSize:12, cursor:"pointer" }}>
+                  ← Back
+                </button>
+              </div>
+            </>
+          );
+        })()}
+      </div>
+    </div>
+  );
+});
+
+// ─── HOME ACTION BANNER ───────────────────────────────────────────────────────
 export const ActionBannerBtns = React.memo(({ T, user, tokens, onVerifyClick, onEarnClick }) => (
   <div className="flex gap-3 px-1 mb-2">
     {!user?.verified && (
@@ -269,7 +491,209 @@ export const ActionBannerBtns = React.memo(({ T, user, tokens, onVerifyClick, on
   </div>
 ));
 
-// ─── 2. STORY RING & STORY BAR ───────────────────────────────────────────────
+// ─── SEASON REWARDS PANEL  ────────────────────────────────────────────────────
+const SeasonRewards = React.memo(({ T }) => {
+  const prizes = [
+    { place:"🥇 1st Place", prize:"₦50,000 Cash + Gold Badge", color:"#FFD700" },
+    { place:"🥈 2nd Place", prize:"₦25,000 Cash + Silver Badge", color:"#C0C0C0" },
+    { place:"🥉 3rd Place", prize:"₦10,000 Cash + Bronze Badge", color:"#CD7F32" },
+  ];
+  return (
+    <div style={{
+      ...glass(T, { borderRadius:16 }), padding:"16px",
+      border:`1px solid ${PURPLE_BD}`, marginBottom:2,
+    }}>
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+        <Gift size={18} color={PURPLE}/>
+        <div style={{ fontWeight:800, fontSize:15, color:T.text }}>Season 1 Rewards</div>
+        <div style={{ marginLeft:"auto", background:PURPLE_DIM, border:`1px solid ${PURPLE_BD}`, borderRadius:8, padding:"3px 10px", fontSize:11, fontWeight:700, color:PURPLE }}>
+          Coming Soon
+        </div>
+      </div>
+      <p style={{ margin:"0 0 12px", fontSize:12, color:T.muted }}>Top ranked players at the end of Season 1 will receive real cash prizes.</p>
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {prizes.map(p => (
+          <div key={p.place} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"rgba(0,0,0,0.3)", border:`1px solid ${PURPLE_BD}`, borderRadius:12, padding:"10px 14px" }}>
+            <span style={{ fontWeight:700, fontSize:13, color:T.text }}>{p.place}</span>
+            <span style={{ fontSize:12, fontWeight:600, color:p.color }}>{p.prize}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop:12, background:"rgba(0,0,0,0.4)", border:`1px dashed ${PURPLE_BD}`, borderRadius:10, padding:"10px 14px", textAlign:"center" }}>
+        <p style={{ margin:0, fontSize:11, color:T.muted }}>🔒 Rewards unlock when Season 1 ends. Keep ranking up to compete!</p>
+      </div>
+    </div>
+  );
+});
+
+// ─── AD BOOST VIEW ────────────────────────────────────────────────────────────
+const AdBoostView = React.memo(({ T, user, tokens, onSpendTokens, onEarnClick }) => {
+  const [selectedTier,  setSelectedTier]  = useState(null);
+  const [gender,        setGender]        = useState("Both");
+  const [payMethod,     setPayMethod]     = useState("card");
+  const [step,          setStep]          = useState("build");
+  const [adWatchStep,   setAdWatchStep]   = useState(null);
+  const [watchProgress, setWatchProgress] = useState(0);
+  const [adsWatched,    setAdsWatched]    = useState(0);
+  const timerRef = useRef(null);
+
+  const tier = AD_TIERS[selectedTier];
+  const tCost = tier ? tokenCost(tier.price) : 0;
+  const canAffordTokens = tier && tokens >= tCost;
+  const formatNaira = (n) => `₦${n.toLocaleString()}`;
+
+  const watchAd = () => {
+    setAdWatchStep("watching"); setWatchProgress(0);
+    let p = 0;
+    timerRef.current = setInterval(() => {
+      p += 2; setWatchProgress(p);
+      if (p >= 100) { clearInterval(timerRef.current); setAdsWatched(c => c+1); onSpendTokens(-TOKEN_ECONOMY.tokensPerAd); setAdWatchStep("watch"); }
+    }, 60);
+  };
+  useEffect(() => () => clearInterval(timerRef.current), []);
+
+  if (adWatchStep === "watch" || adWatchStep === "watching") {
+    return (
+      <div style={{ padding:16 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:18 }}>
+          <ArrowLeft size={20} color={T.text} style={{ cursor:"pointer" }} onClick={() => setAdWatchStep(null)}/>
+          <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:T.text }}>Earn Tokens</h2>
+        </div>
+        <div style={{ ...glass(T, { borderRadius:18 }), padding:24, textAlign:"center" }}>
+          <div style={{ fontSize:44, marginBottom:10 }}>📺</div>
+          <div style={{ fontSize:16, fontWeight:700, color:PURPLE, marginBottom:4 }}>
+            {adWatchStep==="watching" ? "Ad Playing…" : "Watch Ads, Earn Tokens"}
+          </div>
+          {adWatchStep==="watching" ? (
+            <>
+              <div style={{ height:9, borderRadius:99, background:T.divider, overflow:"hidden", margin:"18px 0 10px" }}>
+                <div style={{ height:"100%", width:`${watchProgress}%`, background:PURPLE, borderRadius:99, transition:"width 0.06s linear" }}/>
+              </div>
+              <p style={{ fontSize:12, color:T.muted }}>{watchProgress}%</p>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize:13, color:T.muted, margin:"0 0 16px" }}>
+                🪙 <strong style={{ color:PURPLE }}>{tokens} tokens</strong> · Ads watched: {adsWatched}
+              </p>
+              <button onClick={watchAd} style={{ width:"100%", padding:14, borderRadius:13, border:"none", background:PURPLE, color:WHITE, fontWeight:800, fontSize:15, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                <PlayCircle size={18}/> Watch Ad (+{TOKEN_ECONOMY.tokensPerAd} tokens)
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "success") {
+    return (
+      <div style={{ padding:16, textAlign:"center" }}>
+        <div style={{ ...glass(T, { borderRadius:18 }), padding:36, marginTop:20 }}>
+          <div style={{ fontSize:60, marginBottom:16 }}>🎉</div>
+          <h2 style={{ margin:"0 0 8px", color:PURPLE, fontSize:22, fontWeight:900 }}>Boost Live!</h2>
+          <p style={{ margin:"0 0 20px", fontSize:14, color:T.muted }}>
+            Your post is now shown to <strong style={{ color:T.text }}>{tier?.people?.toLocaleString()} people</strong> for <strong style={{ color:T.text }}>{tier?.days} day{tier?.days>1?"s":""}</strong>.
+          </p>
+          <button onClick={() => { setStep("build"); setSelectedTier(null); }} style={{ padding:"12px 24px", borderRadius:13, border:"none", background:PURPLE, color:WHITE, fontWeight:700, fontSize:14, cursor:"pointer" }}>
+            Boost Another Post
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding:"0 0 80px" }}>
+      <div style={{ padding:"16px 16px 14px", borderBottom:`1px solid ${T.divider}`, background:T.isDark?"rgba(0,0,0,0.96)":"rgba(255,255,255,0.96)", backdropFilter:"blur(12px)" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
+          <Megaphone size={20} color={PURPLE}/>
+          <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:T.text }}>Boost Your Post</h2>
+        </div>
+        <p style={{ margin:0, fontSize:12, color:T.muted }}>Reach more people — card or tokens</p>
+      </div>
+
+      <div style={{ padding:16, display:"flex", flexDirection:"column", gap:14 }}>
+        <div onClick={() => setAdWatchStep("watch")} style={{ background:PURPLE_DIM, border:`1px solid ${PURPLE_BD}`, borderRadius:14, padding:"12px 16px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ fontSize:28 }}>📺</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:700, fontSize:13, color:PURPLE }}>Earn Tokens by Watching Ads</div>
+            <div style={{ fontSize:11, color:T.muted }}>1 ad = {TOKEN_ECONOMY.tokensPerAd} tokens · You have 🪙{tokens}</div>
+          </div>
+          <ChevronRight size={16} color={PURPLE}/>
+        </div>
+
+        <div style={{ ...glass(T, { borderRadius:14 }), padding:16 }}>
+          <div style={{ fontWeight:700, fontSize:13, color:T.text, marginBottom:12, display:"flex", alignItems:"center", gap:6 }}>
+            <Target size={14} color={PURPLE}/> Target Audience
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            {["Male","Female","Both"].map(g => (
+              <button key={g} onClick={() => setGender(g)} style={{ flex:1, padding:"9px 0", borderRadius:10, border:"none", background:gender===g?PURPLE:T.inputBg, color:gender===g?WHITE:T.muted, fontWeight:gender===g?700:500, fontSize:13, cursor:"pointer" }}>
+                {g==="Male"?"👨 Male":g==="Female"?"👩 Female":"👥 Both"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontWeight:700, fontSize:13, color:T.text, marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
+            <TrendingUp size={14} color={PURPLE}/> Choose a Plan
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {AD_TIERS.map((t, i) => {
+              const sel = selectedTier === i;
+              return (
+                <div key={i} onClick={() => setSelectedTier(i)} style={{ ...glass(T, { borderRadius:14 }), padding:"12px 14px", cursor:"pointer", border:`1.5px solid ${sel?PURPLE:T.cardBorder}`, background:sel?PURPLE_DIM:T.cardBg }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <div>
+                      <span style={{ fontWeight:700, fontSize:14, color:sel?PURPLE:T.text }}>{t.label}</span>
+                      {t.starterOnly && <span style={{ fontSize:10, color:T.muted, marginLeft:6 }}>(1-day only)</span>}
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontWeight:800, fontSize:15, color:sel?PURPLE:T.text }}>{formatNaira(t.price)}</div>
+                      <div style={{ fontSize:10, color:T.muted }}>{tokenCost(t.price).toLocaleString()} tokens</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize:11, color:T.muted, marginTop:4 }}>{t.people.toLocaleString()} people · {t.days} day{t.days>1?"s":""}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {selectedTier !== null && (
+          <>
+            <div style={{ ...glass(T, { borderRadius:14 }), padding:16 }}>
+              <div style={{ fontWeight:700, fontSize:13, color:T.text, marginBottom:12 }}>💳 Payment Method</div>
+              <div style={{ display:"flex", gap:8 }}>
+                {["card","tokens"].map(m => (
+                  <button key={m} onClick={() => setPayMethod(m)} style={{ flex:1, padding:"10px 0", borderRadius:10, border:`1.5px solid ${payMethod===m?PURPLE:T.inputBorder}`, background:payMethod===m?PURPLE_DIM:"transparent", color:payMethod===m?PURPLE:T.muted, fontWeight:700, fontSize:13, cursor:"pointer" }}>
+                    {m === "card" ? "💳 Card" : "🪙 Tokens"}
+                  </button>
+                ))}
+              </div>
+              {payMethod === "tokens" && !canAffordTokens && (
+                <p style={{ fontSize:11, color:"#ef4444", margin:"8px 0 0" }}>
+                  You need {tCost.toLocaleString()} tokens but have {tokens}. Watch ads to earn more!
+                </p>
+              )}
+            </div>
+            <button
+              disabled={payMethod==="tokens"&&!canAffordTokens}
+              onClick={() => { if(payMethod==="tokens"&&!canAffordTokens)return; setStep("success"); if(payMethod==="tokens")onSpendTokens(tCost); }}
+              style={{ width:"100%", padding:14, borderRadius:13, border:"none", background:(payMethod==="tokens"&&!canAffordTokens)?T.inputBg:PURPLE, color:(payMethod==="tokens"&&!canAffordTokens)?T.muted:WHITE, fontWeight:800, fontSize:15, cursor:(payMethod==="tokens"&&!canAffordTokens)?"default":"pointer" }}
+            >
+              Boost for {formatNaira(tier?.price||0)}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+});
+
+// ─── STORY RING & BAR ─────────────────────────────────────────────────────────
 const StoryRing = React.memo(({ T, entry, seenIds, onAvatarClick, onAddClick, onViewProfile }) => {
   const hasItems = (entry.items||[]).length > 0;
   const isActive = hasItems && (entry.items||[]).some(it => !seenIds.has(it.id));
@@ -285,10 +709,8 @@ const StoryRing = React.memo(({ T, entry, seenIds, onAvatarClick, onAddClick, on
         style={{ background: ringGrad, cursor: (hasItems||entry.isMe||!entry.isMe) ? "pointer" : "default" }}
       >
         <div className="w-full h-full rounded-full p-[2px]" style={{ background: T.bg }}>
-          <div className="w-full h-full rounded-full p-[2px]" style={{ background: T.bg }}>
-            <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-lg shadow-inner" style={{ background: entry.avatarUrl ? "transparent" : `linear-gradient(135deg, ${PURPLE}99, ${PURPLE})` }}>
-              {entry.avatarUrl ? <img src={entry.avatarUrl} alt="" className="w-full h-full object-cover" /> : (entry.seed||entry.name||"U")[0]?.toUpperCase()}
-            </div>
+          <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-lg shadow-inner" style={{ background: entry.avatarUrl ? "transparent" : `linear-gradient(135deg, ${PURPLE}99, ${PURPLE})` }}>
+            {entry.avatarUrl ? <img src={entry.avatarUrl} alt="" className="w-full h-full object-cover" /> : (entry.seed||entry.name||"U")[0]?.toUpperCase()}
           </div>
         </div>
         
@@ -323,46 +745,197 @@ const StoryBar = React.memo(({ T, statusFeed, seenIds, onAvatarClick, onAddClick
   </div>
 ));
 
+// ─── STORY VIEWER ────────────────────────────────────────────────────────────
+const STORY_ITEM_MS = 5000;
+const StoryViewerModal = React.memo(({ T, statusFeed, startIndex, seenIds, setSeenIds, onDeleteMyItem, onClose, statusLikes, setStatusLikes, statusViews, setStatusViews, currentUser:viewer, onPoints, onViewProfile }) => {
+  const [userIdx,setUserIdx]=useState(startIndex);
+  const [itemIdx,setItemIdx]=useState(0);
+  const [paused,setPaused]=useState(false);
+  const [progress,setProgress]=useState(0);
+  const [showInteractions,setShowInteractions]=useState(false);
+  const startRef=useRef(null);
+  
+  const currentUser=statusFeed[userIdx];
+  const currentItem=currentUser?.items?.[itemIdx];
+  const viewerName=viewer?.name||"You";
+  const storyLikers=(statusLikes&&currentItem)?statusLikes[currentItem.id]||[]:[];
+  const storyViewers=(statusViews&&currentItem)?statusViews[currentItem.id]||[]:[];
+  const iLikedThis=storyLikers.includes(viewerName);
+  
+  const toggleStoryLike=useCallback(()=>{
+    if(!currentItem||!setStatusLikes)return;
+    setStatusLikes(prev=>{const cur=prev[currentItem.id]||[];const next=cur.includes(viewerName)?cur.filter(n=>n!==viewerName):[...cur,viewerName];return{...prev,[currentItem.id]:next};});
+    if(!iLikedThis&&onPoints)onPoints("LIKE_STATUS");
+  }, [currentItem, iLikedThis, onPoints, setStatusLikes, viewerName]);
+  
+  useEffect(()=>{
+    setProgress(0);startRef.current=null;if(!currentItem)return;
+    setSeenIds(p=>new Set([...p,currentItem.id]));
+    if(setStatusViews&&viewerName){setStatusViews(prev=>{const cur=prev[currentItem.id]||[];if(cur.includes(viewerName))return prev;if(onPoints)onPoints("VIEW_STATUS");return{...prev,[currentItem.id]:[...cur,viewerName]};});}
+  },[userIdx,itemIdx, currentItem, setSeenIds, setStatusViews, viewerName, onPoints]);
+  
+  useEffect(()=>{
+    if(!currentItem||paused)return;
+    let handle;
+    const raf=()=>{const now=Date.now();if(!startRef.current)startRef.current=now;const elapsed=now-startRef.current;const pct=Math.min(100,(elapsed/STORY_ITEM_MS)*100);setProgress(pct);if(pct<100)handle=requestAnimationFrame(raf);else advance();};
+    handle=requestAnimationFrame(raf);return()=>cancelAnimationFrame(handle);
+  },[currentItem,paused,userIdx,itemIdx]);
+  
+  const advance=useCallback(()=>{if(itemIdx<(currentUser?.items?.length||0)-1){setItemIdx(i=>i+1);}else if(userIdx<statusFeed.length-1){setUserIdx(i=>i+1);setItemIdx(0);}else onClose();}, [itemIdx, userIdx, currentUser, statusFeed, onClose]);
+  const retreat=useCallback(()=>{if(itemIdx>0)setItemIdx(i=>i-1);else if(userIdx>0){setUserIdx(i=>i-1);setItemIdx(0);}}, [itemIdx, userIdx]);
+  
+  if(!currentUser||!currentItem)return null;
+  const bg=currentItem.type==="photo"?"#000":currentItem.bg||STATUS_BG_PRESETS[0];
+  
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:300,background:"#000",display:"flex",flexDirection:"column"}}>
+      <div style={{position:"absolute",top:0,left:0,right:0,zIndex:10,padding:"12px 12px 8px",display:"flex",gap:4}}>
+        {currentUser.items.map((_,i)=>(
+          <div key={i} style={{flex:1,height:2.5,borderRadius:99,background:"rgba(255,255,255,0.3)",overflow:"hidden"}}>
+            <div style={{height:"100%",background:"#fff",width:`${i<itemIdx?100:i===itemIdx?progress:0}%`,transition:"width 0.1s linear"}}/>
+          </div>
+        ))}
+      </div>
+      <div style={{position:"absolute",top:28,left:0,right:0,zIndex:10,display:"flex",alignItems:"center",padding:"0 14px",gap:10}}>
+        <div onClick={() => { onClose(); onViewProfile(currentUser.userId); }} style={{width:34,height:34,borderRadius:"50%",overflow:"hidden",background:`linear-gradient(135deg,${PURPLE}99,${PURPLE})`,display:"flex",alignItems:"center",justifyContent:"center",color:WHITE,fontWeight:700,cursor:"pointer"}}>
+          {currentUser.avatarUrl?<img src={currentUser.avatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(currentUser.seed||currentUser.name||"U")[0]}
+        </div>
+        <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:"#fff"}}>{currentUser.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.7)"}}>{timeAgo(currentItem.createdAt)}</div></div>
+        <X size={22} color="#fff" style={{cursor:"pointer"}} onClick={onClose}/>
+        {currentUser.isMe&&<Trash2 size={18} color="rgba(255,255,255,0.7)" style={{cursor:"pointer"}} onClick={()=>{onDeleteMyItem(currentItem.id);advance();}}/>}
+        <Eye size={18} color="rgba(255,255,255,0.7)" style={{cursor:"pointer"}} onClick={e=>{e.stopPropagation();setShowInteractions(v=>!v);}}/>
+      </div>
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",background:bg,position:"relative"}} onPointerDown={()=>setPaused(true)} onPointerUp={()=>setPaused(false)}>
+        {currentItem.type==="photo"&&currentItem.imageData&&<img src={currentItem.imageData} alt="" style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}}/>}
+        {currentItem.type==="text"&&<div style={{fontSize:22,fontWeight:800,color:"#fff",textAlign:"center",padding:24,lineHeight:1.35}}>{currentItem.content}</div>}
+        {currentItem.caption&&currentItem.type==="photo"&&<div style={{position:"absolute",bottom:20,left:16,right:16,background:"rgba(0,0,0,0.5)",borderRadius:10,padding:"8px 12px",fontSize:13,color:"#fff"}}>{currentItem.caption}</div>}
+        <div style={{position:"absolute",left:0,top:0,bottom:0,width:"40%",cursor:"pointer"}} onClick={retreat}/>
+        <div style={{position:"absolute",right:0,top:0,bottom:0,width:"40%",cursor:"pointer"}} onClick={advance}/>
+        <div onClick={e=>{e.stopPropagation();toggleStoryLike();}} style={{position:"absolute",bottom:24,right:18,display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer",zIndex:5}}>
+          <div style={{width:44,height:44,borderRadius:"50%",background:iLikedThis?"rgba(124,58,237,0.3)":"rgba(0,0,0,0.4)",border:`2px solid ${iLikedThis?PURPLE:"rgba(255,255,255,0.3)"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <Heart size={20} color={iLikedThis?PURPLE:"#fff"} fill={iLikedThis?PURPLE:"none"}/>
+          </div>
+          <span style={{fontSize:11,color:"#fff",fontWeight:700}}>{storyLikers.length>0?storyLikers.length:""}</span>
+        </div>
+        {showInteractions&&(
+          <div onClick={e=>e.stopPropagation()} style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(10,0,18,0.92)",borderTop:`1px solid ${PURPLE_BD}`,padding:"14px 16px 24px",animation:"modalSlideUp 0.25s ease",zIndex:5,maxHeight:220,overflowY:"auto"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {storyViewers.length===0&&<div style={{fontSize:12,color:"rgba(255,255,255,0.4)",textAlign:"center"}}>No views yet</div>}
+              {storyViewers.map((name,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:28,height:28,borderRadius:"50%",background:PURPLE,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",fontWeight:700}}>{name[0]?.toUpperCase()}</div>
+                  <div style={{flex:1}}><div style={{fontSize:13,color:"#fff",fontWeight:600}}>{name}</div>{storyLikers.includes(name)&&<div style={{fontSize:10,color:PURPLE}}>❤️ Liked this</div>}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+// ─── STATUS COMPOSER ─────────────────────────────────────────────────────────
+const StatusComposerModal = React.memo(({ T, onClose, onSubmit }) => {
+  const [mode,setMode]=useState("text");
+  const [text,setText]=useState("");
+  const [bgIndex,setBgIndex]=useState(0);
+  const [imageData,setImageData]=useState(null);
+  const fileInputRef=useRef(null);
+  
+  const handleFile=useCallback(e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=ev=>setImageData(ev.target?.result||null);r.readAsDataURL(f);}, []);
+  const canSubmit=mode==="text"?text.trim().length>0:!!imageData;
+  const submit=useCallback(()=>{if(!canSubmit)return;onSubmit(mode==="text"?{type:"text",content:text,bg:STATUS_BG_PRESETS[bgIndex]}:{type:"photo",imageData,caption:text});}, [canSubmit, mode, onSubmit, text, bgIndex, imageData]);
+  
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.7)",backdropFilter:"blur(6px)",display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{background:mode==="text"?STATUS_BG_PRESETS[bgIndex]:T.isDark?"#0A0012":"#fff",borderRadius:"20px 20px 0 0",padding:18,minHeight:360,display:"flex",flexDirection:"column",animation:"modalSlideUp 0.3s ease"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div style={{display:"flex",gap:8}}>
+            {[{id:"text",label:"Text",Icon:TypeIcon},{id:"photo",label:"Photo",Icon:ImageIcon}].map(m=>(
+              <button key={m.id} onClick={()=>setMode(m.id)} style={{padding:"6px 14px",borderRadius:20,border:"none",fontSize:12.5,fontWeight:700,cursor:"pointer",background:mode===m.id?"rgba(255,255,255,0.25)":"transparent",color:mode===m.id?"#fff":T.isDark?"#fff":"#222"}}>
+                <m.Icon size={13} style={{verticalAlign:"-2px",marginRight:4}}/>{m.label}
+              </button>
+            ))}
+          </div>
+          <X size={22} color={mode==="text"?"#fff":T.text} style={{cursor:"pointer"}} onClick={onClose}/>
+        </div>
+        {mode==="text"?(
+          <>
+            <textarea autoFocus value={text} onChange={e=>setText(e.target.value)} placeholder="What's on your mind?" style={{flex:1,background:"transparent",border:"none",outline:"none",color:"#fff",fontSize:22,fontWeight:700,textAlign:"center",resize:"none",lineHeight:1.4,padding:"30px 6px"}}/>
+            <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:10}}>
+              {STATUS_BG_PRESETS.map((bg,i)=>(
+                <div key={i} onClick={()=>setBgIndex(i)} style={{width:28,height:28,borderRadius:"50%",background:bg,cursor:"pointer",border:bgIndex===i?"2.5px solid #fff":"2px solid rgba(255,255,255,0.4)",transform:bgIndex===i?"scale(1.1)":"scale(1)"}}/>
+              ))}
+            </div>
+          </>
+        ):(
+          <div style={{flex:1,display:"flex",flexDirection:"column",gap:12}}>
+            {imageData?(<div style={{position:"relative",borderRadius:14,overflow:"hidden",flex:1}}>
+              <img src={imageData} alt="" style={{width:"100%",height:220,objectFit:"cover"}}/>
+              <input value={text} onChange={e=>setText(e.target.value)} placeholder="Add caption..." style={{position:"absolute",bottom:10,left:10,right:10,background:"rgba(0,0,0,0.45)",border:"none",borderRadius:10,padding:"8px 12px",color:"#fff",outline:"none",fontSize:13}}/>
+            </div>):(
+              <button onClick={()=>fileInputRef.current?.click()} style={{flex:1,border:`2px dashed ${T.inputBorder}`,borderRadius:14,background:T.inputBg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,color:T.muted,cursor:"pointer",fontSize:13}}>
+                <Camera size={28}/> Tap to upload
+              </button>
+            )}
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFile} style={{display:"none"}}/>
+          </div>
+        )}
+        <button disabled={!canSubmit} onClick={submit} style={{marginTop:14,padding:13,borderRadius:12,border:"none",fontWeight:700,fontSize:14,cursor:canSubmit?"pointer":"default",background:canSubmit?PURPLE:T.divider,color:canSubmit?WHITE:T.muted,transition:"all 0.2s"}}>
+          Share to Story
+        </button>
+      </div>
+    </div>
+  );
+});
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+const Toast = React.memo(({ T, message }) => {
+  if (!message) return null;
+  return (
+    <div style={{ position:"fixed", bottom:94, left:"50%", zIndex:400, transform:"translateX(-50%)", background:T.isDark?"rgba(0,0,12,0.96)":"rgba(10,0,20,0.92)", color:PURPLE, padding:"10px 18px", borderRadius:24, fontSize:13, fontWeight:600, boxShadow:`0 8px 24px ${PURPLE_GLOW}`, whiteSpace:"nowrap", animation:"toastPop 2.4s ease forwards" }}>
+      {message}
+    </div>
+  );
+});
+
 // ─── COMMENT SECTION ─────────────────────────────────────────────────────────
 const CommentSection = React.memo(({ T, post, setAllPosts, onViewProfile, onPoints }) => {
   const [commentText, setCommentText] = useState("");
   const submitComment = useCallback(() => {
     if (!commentText.trim()) return;
-    const newComment = { id:uid("c"), author:"You", text:commentText.trim(), time:"Just now", authorId:"me" };
-    setAllPosts(prev => prev.map(p => p.id===post.id ? {...p, comments:[...(p.comments||[]), newComment]} : p));
+    const newComment = { id:uid("c"), author:"You", text:commentText.trim(), time:"Just now", likes:0, liked:false, authorId:"me" };
+    setAllPosts(prev => prev.map(p => p.id===post.id ? {...p,comments:[...(p.comments||[]),newComment]} : p));
     if (onPoints) onPoints("COMMENT");
     setCommentText("");
   }, [commentText, onPoints, post.id, setAllPosts]);
   
   return (
-    <div style={{ marginTop:14, borderTop:`1px solid ${T.divider}`, paddingTop:12 }}>
-      {(post.comments||[]).length === 0 && <p style={{ margin:"0 0 12px", fontSize:12, color:T.muted, textAlign:"center" }}>No comments yet — be first!</p>}
-      <div className="flex flex-col gap-2 mb-3 max-h-[180px] overflow-y-auto pr-1">
-        {(post.comments||[]).map(c => (
-          <div key={c.id} className="flex gap-2.5 items-start">
-            <div 
-              onClick={() => c.authorId && onViewProfile(c.authorId)}
-              className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 cursor-pointer"
-              style={{ background: PURPLE_DIM, border: `1px solid ${PURPLE_BD}`, color: PURPLE }}
-            >
-              {(c.author||"Y")[0].toUpperCase()}
-            </div>
-            <div className="flex-1 rounded-xl p-2.5" style={{ background: T.inputBg, border: `1px solid ${T.inputBorder}` }}>
-              <div className="text-[12px] font-bold" style={{ color: T.text }}>{c.author}</div>
-              <div className="text-[13px] mt-0.5" style={{ color: T.text }}>{c.text}</div>
-            </div>
+    <div className="fade-up" style={{ marginTop:10, borderTop:`1px solid ${T.divider}`, paddingTop:10 }}>
+      {(post.comments||[]).length === 0 && <p style={{ margin:"0 0 10px", fontSize:12, color:T.muted, textAlign:"center" }}>No comments yet — be first!</p>}
+      {(post.comments||[]).map(c => (
+        <div key={c.id} style={{ display:"flex", gap:8, marginBottom:10 }}>
+          <div 
+            onClick={() => c.authorId && onViewProfile(c.authorId)}
+            style={{ width:28, height:28, borderRadius:"50%", background:PURPLE_DIM, border:`1px solid ${PURPLE_BD}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, color:PURPLE, fontWeight:700, flexShrink:0, cursor:c.authorId?"pointer":"default" }}>
+            {(c.author||"Y")[0].toUpperCase()}
           </div>
-        ))}
-      </div>
-      <div className="flex gap-2">
+          <div style={{ flex:1, background:T.inputBg, borderRadius:12, padding:"8px 12px", border:`1px solid ${T.inputBorder}` }}>
+            <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{c.author}</div>
+            <div style={{ fontSize:13, color:T.text, lineHeight:1.4 }}>{c.text}</div>
+            <div style={{ fontSize:10, color:T.muted, marginTop:4 }}>{c.time}</div>
+          </div>
+        </div>
+      ))}
+      <div style={{ display:"flex", gap:8, alignItems:"center" }}>
         <input
           value={commentText} onChange={e=>setCommentText(e.target.value)}
           onKeyDown={e=>e.key==="Enter"&&submitComment()}
           placeholder="Write a comment…"
-          className="flex-1 px-3 py-2 rounded-xl text-[13px] outline-none"
-          style={{ background: T.inputBg, border: `1px solid ${T.inputBorder}`, color: T.text }}
+          style={{ flex:1, background:T.inputBg, border:`1px solid ${T.inputBorder}`, borderRadius:12, padding:"9px 13px", color:T.text, outline:"none", fontSize:13 }}
         />
-        <button onClick={submitComment} className="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer border-none" style={{ background: commentText.trim()?PURPLE:T.inputBg, color: commentText.trim()?WHITE:T.muted }}>
+        <button onClick={submitComment} style={{ width:36, height:36, borderRadius:10, background:commentText.trim()?PURPLE:T.inputBg, color:commentText.trim()?WHITE:T.muted, display:"flex", alignItems:"center", justifyContent:"center", border:`1px solid ${T.inputBorder}` }}>
           <Send size={14}/>
         </button>
       </div>
@@ -370,7 +943,7 @@ const CommentSection = React.memo(({ T, post, setAllPosts, onViewProfile, onPoin
   );
 });
 
-// ─── 3. POST CARD & VIDEO POST CARD ──────────────────────────────────────────
+// ─── POST CARD ────────────────────────────────────────────────────────────────
 const PostCard = React.memo(({ T, post, setAllPosts, onViewProfile, onPoints, currentUser, index }) => {
   const [showComments, setShowComments] = useState(false);
   const [likeAnim,     setLikeAnim]     = useState(false);
@@ -391,7 +964,7 @@ const PostCard = React.memo(({ T, post, setAllPosts, onViewProfile, onPoints, cu
     }));
     if (!post.liked && onPoints) onPoints("LIKE_POST");
   }, [currentUser?.name, onPoints, post.id, post.liked, setAllPosts]);
-  
+
   const toggleSave = useCallback(() => { setSaveAnim(true); setTimeout(()=>setSaveAnim(false),400); setAllPosts(prev=>prev.map(p=>p.id===post.id?{...p,saved:!p.saved,saves:p.saved?p.saves-1:p.saves+1}:p)); }, [post.id, setAllPosts]);
   const toggleRepost = useCallback(() => { setAllPosts(prev=>prev.map(p=>p.id===post.id?{...p,reposted:!p.reposted,reposts:p.reposted?p.reposts-1:p.reposts+1}:p)); if(!post.reposted&&onPoints)onPoints("REPOST"); }, [onPoints, post.id, post.reposted, setAllPosts]);
   const deletePost = useCallback(() => setAllPosts(prev => prev.filter(p => p.id !== post.id)), [post.id, setAllPosts]);
@@ -470,7 +1043,7 @@ const PostCard = React.memo(({ T, post, setAllPosts, onViewProfile, onPoints, cu
         </span>
         <div className="flex gap-4">
           <span>{post.reposts} reposts</span>
-          <span>{(post.comments||[]).length} comments</span>
+          <span>{post.comments?.length || 0} comments</span>
         </div>
       </div>
 
@@ -503,7 +1076,7 @@ const PostCard = React.memo(({ T, post, setAllPosts, onViewProfile, onPoints, cu
             <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
               {(post.likedBy || []).map((n, i) => (
                 <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-black/5 transition-colors cursor-pointer">
-                  <div className="w-9 h-9 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center text-xs">{n[0]}</div>
+                  <Avatar seed={n} T={T} size={36}/>
                   <span className="font-bold text-[14px]" style={{ color: T.text }}>{n}</span>
                 </div>
               ))}
@@ -518,6 +1091,7 @@ const PostCard = React.memo(({ T, post, setAllPosts, onViewProfile, onPoints, cu
   );
 });
 
+// ─── VIDEO POST CARD ──────────────────────────────────────────────────────────
 const VideoPostCard = React.memo(({ T, post, setAllPosts, onViewProfile, onPoints, currentUser, index }) => {
   const [showComments, setShowComments] = useState(false);
   const [likeAnim,     setLikeAnim]     = useState(false);
@@ -539,10 +1113,8 @@ const VideoPostCard = React.memo(({ T, post, setAllPosts, onViewProfile, onPoint
   }, [currentUser?.name, onPoints, post.id, post.liked, setAllPosts]);
   
   const toggleSave = useCallback(() => { setSaveAnim(true); setTimeout(()=>setSaveAnim(false),400); setAllPosts(prev=>prev.map(p=>p.id===post.id?{...p,saved:!p.saved,saves:p.saved?p.saves-1:p.saves+1}:p)); }, [post.id, setAllPosts]);
-  const toggleRepost = useCallback(() => { 
-  setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, reposted: !p.reposted, reposts: p.reposted ? p.reposts - 1 : p.reposts + 1 } : p)); 
-  if (!post.reposted && onPoints) onPoints("REPOST"); 
-}, [onPoints, post.id, post.reposted, setAllPosts]);
+  const toggleRepost = useCallback(() => { setAllPosts(prev=>prev.map(p=>p.id===post.id?{...p,reposted:!p.reposted,reposts:p.reposted?p.reposts-1:p.reposts+1}:p)); if(!post.reposted&&onPoints)onPoints("REPOST"); }, [onPoints, post.id, post.reposted, setAllPosts]);
+  const deletePost = useCallback(() => setAllPosts(prev=>prev.filter(p=>p.id!==post.id)), [post.id, setAllPosts]);
 
   return (
     <div 
@@ -595,7 +1167,7 @@ const VideoPostCard = React.memo(({ T, post, setAllPosts, onViewProfile, onPoint
         <span>{post.likes} likes</span>
         <div className="flex gap-4">
           <span>{post.reposts} reposts</span>
-          <span>{(post.comments||[]).length} comments</span>
+          <span>{post.comments?.length || 0} comments</span>
         </div>
       </div>
       <div className="h-[1px] w-full opacity-50" style={{ background: T.divider }} />
@@ -610,7 +1182,103 @@ const VideoPostCard = React.memo(({ T, post, setAllPosts, onViewProfile, onPoint
   );
 });
 
-// ─── 4. APP HEADER ───────────────────────────────────────────────────────────
+// ─── SETTINGS PANEL ──────────────────────────────────────────────────────────
+const SettingsPanel = React.memo(({ T, open, onClose, themeMode, setThemeMode, onSignOut, onFeedback }) => {
+  const [section, setSection] = useState(null);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  useEffect(() => { if (!open) setSection(null); }, [open]);
+  if (!open) return null;
+
+  const themeOptions = [
+    { id:"device", label:"Default Device Mode", icon:Monitor, desc:"Follows your system setting" },
+    { id:"dark",   label:"Dark Mode",            icon:Moon,    desc:"Black & Purple — current"    },
+    { id:"light",  label:"Light Mode",           icon:Sun,     desc:"Clean & bright"              },
+  ];
+  const rowStyle = (danger = false) => ({
+    display:"flex", alignItems:"center", gap:12, padding:"14px 20px", cursor:"pointer",
+    color: danger ? "#ef4444" : T.text, fontSize:14, borderBottom:`1px solid ${T.divider}`, transition:"background 0.15s",
+  });
+  const sendFeedback = () => {
+    if (!feedbackText.trim()) return;
+    const subject = encodeURIComponent("Glimacy App Feedback");
+    const body    = encodeURIComponent(feedbackText.trim());
+    window.open(`mailto:therealglimmar@gmail.com?subject=${subject}&body=${body}`, "_blank");
+    setFeedbackSent(true);
+    setFeedbackText("");
+    setTimeout(() => setFeedbackSent(false), 3000);
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:100, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", flexDirection:"column", justifyContent:"flex-end", animation:"overlayFadeIn 0.2s ease" }} onClick={e => { if (e.target===e.currentTarget) onClose(); }}>
+      <div style={{ background:T.isDark?"#0A0012":"#fff", borderRadius:"20px 20px 0 0", paddingBottom:36, border:`1px solid ${T.divider}`, boxShadow:"0 -8px 40px rgba(0,0,0,0.5)", maxHeight:"80vh", overflowY:"auto", animation:"modalSlideUp 0.25s ease" }}>
+        <div style={{ width:36, height:4, background:PURPLE_DIM, borderRadius:2, margin:"12px auto 0" }}/>
+        <div style={{ display:"flex", alignItems:"center", padding:"16px 20px 8px", gap:10 }}>
+          {section && <ArrowLeft size={18} color={PURPLE} style={{ cursor:"pointer" }} onClick={() => setSection(null)}/>}
+          <div style={{ fontWeight:700, fontSize:17, color:T.text }}>
+            {section==="theme" ? "Choose Theme" : section==="feedback" ? "Send Feedback" : "Settings"}
+          </div>
+        </div>
+
+        {!section && (
+          <>
+            <div style={rowStyle()} onMouseOver={e=>e.currentTarget.style.background=T.hoverBg} onMouseOut={e=>e.currentTarget.style.background="transparent"} onClick={() => setSection("theme")}>
+              <div style={{ width:36, height:36, borderRadius:10, background:PURPLE_DIM, display:"flex", alignItems:"center", justifyContent:"center" }}><Moon size={17} color={PURPLE}/></div>
+              <div style={{ flex:1 }}><div style={{ fontWeight:600 }}>Theme</div><div style={{ fontSize:11, color:T.muted, marginTop:1 }}>{themeOptions.find(t=>t.id===themeMode)?.label||"Dark Mode"}</div></div>
+              <ChevronRight size={16} color={T.muted}/>
+            </div>
+            <div style={rowStyle()} onMouseOver={e=>e.currentTarget.style.background=T.hoverBg} onMouseOut={e=>e.currentTarget.style.background="transparent"} onClick={() => setSection("feedback")}>
+              <div style={{ width:36, height:36, borderRadius:10, background:PURPLE_DIM, display:"flex", alignItems:"center", justifyContent:"center" }}><MessageSquare size={17} color={PURPLE}/></div>
+              <div style={{ flex:1 }}><div style={{ fontWeight:600 }}>Send Feedback</div><div style={{ fontSize:11, color:T.muted, marginTop:1 }}>Report a bug or suggest a feature</div></div>
+              <ChevronRight size={16} color={T.muted}/>
+            </div>
+            <div style={{ height:8, background:T.isDark?"rgba(255,255,255,0.02)":"rgba(0,0,0,0.03)", margin:"8px 0" }}/>
+            <div style={rowStyle(true)} onMouseOver={e=>e.currentTarget.style.background=T.hoverBg} onMouseOut={e=>e.currentTarget.style.background="transparent"} onClick={() => { onSignOut(); onClose(); }}>
+              <div style={{ width:36, height:36, borderRadius:10, background:"rgba(239,68,68,0.10)", display:"flex", alignItems:"center", justifyContent:"center" }}><ArrowLeft size={17} color="#ef4444"/></div>
+              <div style={{ fontWeight:600 }}>Log Out</div>
+            </div>
+          </>
+        )}
+
+        {section==="theme" && (
+          <div style={{ padding:"8px 0" }}>
+            {themeOptions.map(opt => {
+              const selected = themeMode === opt.id;
+              return (
+                <div key={opt.id} style={{ ...rowStyle(), background:selected?PURPLE_DIM:"transparent" }} onClick={() => { setThemeMode(opt.id); setSection(null); }} onMouseOver={e=>!selected&&(e.currentTarget.style.background=T.hoverBg)} onMouseOut={e=>!selected&&(e.currentTarget.style.background=selected?PURPLE_DIM:"transparent")}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:selected?PURPLE_DIM:T.inputBg, display:"flex", alignItems:"center", justifyContent:"center", border:selected?`1px solid ${PURPLE_BD}`:"none" }}><opt.icon size={17} color={selected?PURPLE:T.muted}/></div>
+                  <div style={{ flex:1 }}><div style={{ fontWeight:selected?700:500, color:selected?PURPLE:T.text }}>{opt.label}</div><div style={{ fontSize:11, color:T.muted, marginTop:1 }}>{opt.desc}</div></div>
+                  {selected && <div style={{ width:8, height:8, borderRadius:"50%", background:PURPLE }}/>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {section==="feedback" && (
+          <div style={{ padding:"8px 20px 0" }}>
+            <p style={{ fontSize:13, color:T.muted, marginBottom:12 }}>Your feedback goes directly to the Glimacy admin (Glimacy).</p>
+            {feedbackSent ? (
+              <div style={{ background:PURPLE_DIM, border:`1px solid ${PURPLE_BD}`, borderRadius:12, padding:"16px", textAlign:"center" }}>
+                <div style={{ fontSize:28, marginBottom:6 }}>✅</div>
+                <div style={{ fontWeight:700, color:T.text }}>Feedback sent! Thank you.</div>
+              </div>
+            ) : (
+              <>
+                <textarea value={feedbackText} onChange={e=>setFeedbackText(e.target.value)} placeholder="Describe your feedback, bug, or feature request..." rows={4} style={{ width:"100%", background:T.inputBg, border:`1px solid ${PURPLE_BD}`, borderRadius:12, padding:"12px 14px", color:T.text, outline:"none", fontSize:13, resize:"none", fontFamily:"inherit" }}/>
+                <button onClick={sendFeedback} disabled={!feedbackText.trim()} style={{ width:"100%", marginTop:10, padding:13, borderRadius:12, border:"none", background:feedbackText.trim()?PURPLE:T.inputBg, color:feedbackText.trim()?WHITE:T.muted, fontWeight:700, fontSize:14, cursor:feedbackText.trim()?"pointer":"default" }}>
+                  Send to Admin
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+// ─── INLINE HEADER (4 icons: Search · Feedback · Settings · Messages) ─────────
 const AppHeader = React.memo(({ T, user, onAvatarClick, onSearchClick, onSettingsClick, onMessagesClick, onFeedbackClick, unreadMessages, children }) => (
   <div className="flex items-center gap-3 px-4 py-3 sticky top-0 z-50 transition-all duration-300 backdrop-blur-xl bg-opacity-90 shadow-sm" style={{
     background: T.isDark ? "rgba(10, 0, 18, 0.85)" : "rgba(240, 238, 255, 0.85)",
@@ -644,418 +1312,713 @@ const AppHeader = React.memo(({ T, user, onAvatarClick, onSearchClick, onSetting
   </div>
 ));
 
-// ─── VERIFY MODAL ────────────────────────────────────────────────────────────
-const VerifyModal = React.memo(({ T, tokens, user, onClose, onVerified, onEarnedTokens }) => {
-  const [tab,          setTab]          = useState("blue");
-  const [step,         setStep]         = useState("options");
-  const [adCount,      setAdCount]      = useState(0);
-  const [watchProgress,setWatchProgress]= useState(0);
-  const timerRef = useRef(null);
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+export default function App() {
+  const [themeMode,  setThemeMode]  = useState("dark");
+  const getDevicePrefer = () => typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches ? THEMES.glimacy : THEMES.light;
+  const T = themeMode === "light" ? THEMES.light : themeMode === "device" ? getDevicePrefer() : THEMES.glimacy;
 
-  const userPostCount     = user?.posts || 0;
-  const verifiedFollowers = user?.followers_count || 0; 
-  const canWhite          = verifiedFollowers >= TOKEN_ECONOMY.whiteMinFollowers && userPostCount >= TOKEN_ECONOMY.whiteMinPosts;
-  const canWhiteTokens    = tokens >= TOKEN_ECONOMY.whiteTokenCost && canWhite;
-  const canBlueTokens     = tokens >= TOKEN_ECONOMY.tokensToVerify;
+  const [activeTab,       setActiveTab]       = useState("home");
+  const [homeFeedTab,     setHomeFeedTab]     = useState("friends");
+  const [isLoggedIn,      setIsLoggedIn]      = useState(false);
+  const [isAuthLoading,   setIsAuthLoading]   = useState(true);
+  const [user,            setUser]            = useState(MOCK_USER);
+  const [tokens,          setTokens]          = useState(MOCK_USER.tokens || 0);
+  const [appProfiles,     setAppProfiles]     = useState([]);
+  const [followingIds,    setFollowingIds]    = useState(new Set());
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
 
-  const watchAd = () => {
-    setStep("watchingAd"); setWatchProgress(0);
-    let p = 0;
-    timerRef.current = setInterval(() => {
-      p += 2; setWatchProgress(p);
-      if (p >= 100) {
-        clearInterval(timerRef.current);
-        setAdCount(c => c + 1);
-        onEarnedTokens(TOKEN_ECONOMY.tokensPerAd);
-        setStep("watchAd");
-      }
-    }, 60);
+  const [feedPosts, setFeedPosts] = useState(() => {
+    const persisted = loadLS(LS_KEYS.feedPosts, null);
+    if (persisted && persisted.length > 0) return persisted;
+    const likedIds = new Set(loadLS(LS_KEYS.likedIds, []));
+    const savedIds = new Set(loadLS(LS_KEYS.savedArchive, []).map(p => p.id));
+    return INITIAL_FEED_POSTS.map(p => ({ ...p, likedBy:p.likedBy||[], liked:likedIds.has(p.id)||p.liked, saved:savedIds.has(p.id)||p.saved }));
+  });
+  const [myVideoPosts, setMyVideoPosts] = useState(() => {
+    const persisted = loadLS(LS_KEYS.videoPosts, null);
+    if (persisted && persisted.length > 0) return persisted;
+    const likedIds = new Set(loadLS(LS_KEYS.likedIds, []));
+    const savedIds = new Set(loadLS(LS_KEYS.savedArchive, []).map(p => p.id));
+    return MY_VIDEO_POSTS.map(p => ({ ...p, likedBy:p.likedBy||[], liked:likedIds.has(p.id)||p.liked, saved:savedIds.has(p.id)||p.saved }));
+  });
+
+  const [userScore,           setUserScore]          = useState(() => loadLS(LS_KEYS.userScore, MOCK_USER.score || 0));
+  const [statusLikes,         setStatusLikes]        = useState(() => loadLS(LS_KEYS.statusLikes, {}));
+  const [statusViews,         setStatusViews]        = useState(() => loadLS(LS_KEYS.statusViews, {}));
+  const [notifications,       setNotifications]      = useState(MOCK_NOTIFICATIONS);
+  const [viewingProfileId,    setViewingProfileId]   = useState(null);
+  const [isEditModalOpen,     setIsEditModalOpen]    = useState(false);
+  const [isCreateModalOpen,   setIsCreateModalOpen]  = useState(false);
+  const [settingsOpen,        setSettingsOpen]       = useState(false);
+  const [editName,            setEditName]           = useState("");
+  const [editHandle,          setEditHandle]         = useState("");
+  const [editBio,             setEditBio]            = useState("");
+  const [editUni,             setEditUni]            = useState("");
+  const [editFaculty,         setEditFaculty]        = useState("");
+  const [editRelationship,    setEditRelationship]   = useState("Single");
+  const [editGender,          setEditGender]         = useState("Male");
+  const [editPhone,           setEditPhone]          = useState("");
+  const [editHobby,           setEditHobby]          = useState("");
+  const [searchQuery,         setSearchQuery]        = useState("");
+  const [searchSubTab,        setSearchSubTab]       = useState("posts");
+  const [imagePreview,        setImagePreview]       = useState(null);
+  
+  const [headerVisible,       setHeaderVisible]      = useState(true);
+  const headerVisibleRef      = useRef(true);
+  const setHeaderVis          = useCallback((val) => { if(headerVisibleRef.current !== val){ headerVisibleRef.current = val; setHeaderVisible(val); } }, []);
+  
+  const lastScrollY           = useRef(0);
+  const scrollTimer           = useRef(null);
+  const scrollContainerRef    = useRef(null);
+  const scrollRaf             = useRef(0);
+  
+  const [myStatusItems,       setMyStatusItems]      = useState(() => loadLS(LS_KEYS.myStatuses, []));
+  const [seenStatusItemIds,   setSeenStatusItemIds]  = useState(() => new Set(loadLS(LS_KEYS.seenStatusItems, [])));
+  const [otherStatuses,       setOtherStatuses]      = useState([]);
+  const [statusComposerOpen,  setStatusComposerOpen] = useState(false);
+  const [storyViewerIndex,    setStoryViewerIndex]   = useState(null);
+  const [savedArchive,        setSavedArchive]       = useState(() => loadLS(LS_KEYS.savedArchive, []));
+  const [toast,               setToast]              = useState(null);
+  const toastTimer = useRef(null);
+  const showToast = useCallback((message) => { setToast(message); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 2400); }, []);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [refreshing,   setRefreshing]   = useState(false);
+  const pullStartY = useRef(null);
+
+  // ── Scroll handler: rAF-throttled to eliminate scroll lag, applied to
+  //    EVERY scrollable feed (immersive full-screen behaviour is now global,
+  //    not home-only). State only updates when visibility actually flips. ──
+  const handleMainScroll = useCallback((e) => {
+    const cur = e.currentTarget.scrollTop;
+    // Coalesce bursts of scroll events into a single frame of work.
+    if (scrollRaf.current) {
+      clearTimeout(scrollTimer.current);
+      scrollTimer.current = setTimeout(() => setHeaderVis(true), 1400);
+      return;
+    }
+    scrollRaf.current = requestAnimationFrame(() => {
+      scrollRaf.current = 0;
+      const diff = cur - lastScrollY.current;
+      if (cur < 8) setHeaderVis(true);                                       // pinned at top → bars always visible
+      else if (diff > 8 && headerVisibleRef.current) setHeaderVis(false);    // scrolling down → immersive
+      else if (diff < -8 && !headerVisibleRef.current) setHeaderVis(true);   // scrolling up → reveal
+      lastScrollY.current = cur;
+    });
+    clearTimeout(scrollTimer.current);
+    scrollTimer.current = setTimeout(() => setHeaderVis(true), 1400);
+  }, [setHeaderVis]);
+
+  useEffect(() => () => { if (scrollRaf.current) cancelAnimationFrame(scrollRaf.current); }, []);
+
+  const handleUpdateAvatar = useCallback((url) => setUser(prev => ({ ...prev, avatarUrl:url })), []);
+  const handleUpdateCover  = useCallback((url) => setUser(prev => ({ ...prev, coverUrl:url })), []);
+
+  // ── Supabase: fetch user ───────────────────────────────────────────────────
+  const fetchUserData = async (userId) => {
+    const { data:userData } = await supabase.from("profiles").select("*").eq("id", userId).single();
+    if (userData) {
+      setUser(prev => ({
+        ...prev, ...userData,
+        name: userData.first_name ? `${userData.first_name} ${userData.last_name||""}`.trim() : (userData.name || "User"),
+      }));
+    }
+    const { data:profilesData } = await supabase.from("profiles").select("*");
+    setAppProfiles(profilesData ? profilesData.map(p => ({ ...p, name: p.first_name ? `${p.first_name} ${p.last_name||""}`.trim() : (p.name||"User") })) : MOCK_PROFILES);
+    const { data:followsData } = await supabase.from("follows").select("following_id").eq("follower_id", userId);
+    if (followsData) setFollowingIds(new Set(followsData.map(f => f.following_id)));
   };
-  useEffect(() => () => clearInterval(timerRef.current), []);
+
+  const fetchDatabasePosts = async (currentAuthId) => {
+    try {
+      const { data, error } = await supabase.from("posts").select("*").order("created_at", { ascending:false });
+      if (error || !data) return;
+      const likedIds = new Set(loadLS(LS_KEYS.likedIds, []));
+      const savedIds = new Set(loadLS(LS_KEYS.savedArchive, []).map(p => p.id));
+      const formatted = data.map(post => {
+        const isMe = currentAuthId && post.author_id === currentAuthId;
+        return { id:post.id, authorId:post.author_id, author:isMe?user.name:"Campus Member", handle:isMe?user.handle:"@campus_member", seed:isMe?(user.seed||user.name):`user_${post.id}`, time:new Date(post.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}), type:"text", content:post.content, likes:0, likedBy:[], comments:[], reposts:0, saves:0, views:0, liked:likedIds.has(post.id), saved:savedIds.has(post.id), reposted:false };
+      });
+      setFeedPosts(formatted);
+    } catch (err) { console.error("Post fetch error:", err); }
+  };
+
+  useEffect(() => {
+    const initApp = async () => {
+      const { data:{ session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+      if (session?.user) { setUser(prev => ({ ...prev, id:session.user.id })); await fetchUserData(session.user.id); fetchDatabasePosts(session.user.id); }
+      else fetchDatabasePosts(null);
+      setIsAuthLoading(false);
+    };
+    initApp();
+    const { data:{ subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setIsLoggedIn(!!session);
+      if (session?.user) { setUser(prev => ({ ...prev, id:session.user.id })); fetchUserData(session.user.id); fetchDatabasePosts(session.user.id); }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // ── Persist ────────────────────────────────────────────────────────────────
+  useEffect(() => { saveLS(LS_KEYS.myStatuses, myStatusItems); },         [myStatusItems]);
+  useEffect(() => { saveLS(LS_KEYS.seenStatusItems, [...seenStatusItemIds]); }, [seenStatusItemIds]);
+  useEffect(() => { saveLS(LS_KEYS.savedArchive, savedArchive); },        [savedArchive]);
+  useEffect(() => { saveLS(LS_KEYS.likedIds, [...feedPosts,...myVideoPosts].filter(p=>p.liked).map(p=>p.id)); }, [feedPosts,myVideoPosts]);
+  useEffect(() => { saveLS(LS_KEYS.feedPosts,   feedPosts); },            [feedPosts]);
+  useEffect(() => { saveLS(LS_KEYS.videoPosts,  myVideoPosts); },         [myVideoPosts]);
+  useEffect(() => { saveLS(LS_KEYS.userScore,   userScore); },            [userScore]);
+  useEffect(() => { saveLS(LS_KEYS.statusLikes, statusLikes); },          [statusLikes]);
+  useEffect(() => { saveLS(LS_KEYS.statusViews, statusViews); },          [statusViews]);
+
+  const isAuthorVerified = useCallback((post) => {
+    if (post.authorId === user?.id || post.authorId === "me") return !!user?.verified;
+    return !!appProfiles.find(p => p.id === post.authorId)?.verified;
+  }, [user, appProfiles]);
+
+  useEffect(() => {
+    const currentlySaved = [...feedPosts,...myVideoPosts].filter(p=>p.saved);
+    const idsInScope = new Set([...feedPosts,...myVideoPosts].map(p=>p.id));
+    setSavedArchive(prev => {
+      const map = new Map(prev.map(p=>[p.id,p]));
+      currentlySaved.forEach(p => { const e=map.get(p.id); map.set(p.id,{id:p.id,type:p.type,author:p.author,handle:p.handle,content:p.content,caption:p.caption,thumbnail:p.thumbnail,likes:p.likes,comments:p.comments,views:p.views,savedAt:e?.savedAt||Date.now(),authorVerifiedAtSave:e?e.authorVerifiedAtSave:isAuthorVerified(p)}); });
+      const next = []; map.forEach((entry,id)=>{ const inScope=idsInScope.has(id); const stillSaved=currentlySaved.some(p=>p.id===id); if(!inScope||stillSaved)next.push(entry); });
+      return next.sort((a,b)=>(b.savedAt||0)-(a.savedAt||0));
+    });
+  }, [feedPosts, myVideoPosts, isAuthorVerified]);
+
+  useEffect(() => {
+    if (otherStatuses.length > 0) return;
+    const pool = appProfiles.length ? appProfiles : MOCK_PROFILES;
+    if (!pool.length) return;
+    const now = Date.now();
+    const seeded = pool.slice(0,6).map((p,i) => ({
+      userId:p.id, name:p.name, handle:p.handle, seed:p.seed||p.name, avatarUrl:p.avatarUrl||null, verified:!!p.verified,
+      items: i%3===2 ? [] : [{ id:`seed_st_${p.id}`, type:"text", content:STATUS_SAMPLE_LINES[i%STATUS_SAMPLE_LINES.length], bg:STATUS_BG_PRESETS[i%STATUS_BG_PRESETS.length], createdAt:now-(i+1)*1000*60*35 }]
+    }));
+    setOtherStatuses(seeded);
+  }, [appProfiles, otherStatuses.length]);
+
+  useEffect(() => {
+    setHeaderVis(true); setPullDistance(0); pullStartY.current=null;
+    lastScrollY.current = 0;
+    if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+  }, [activeTab, setHeaderVis]);
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+  const handleToggleFollow = useCallback(async (targetId) => {
+    if (!user?.id || user.id === "me") return;
+    const isFollowing = followingIds.has(targetId);
+    setFollowingIds(prev => { const next=new Set(prev); isFollowing?next.delete(targetId):next.add(targetId); return next; });
+    setAppProfiles(prev => prev.map(p => p.id===targetId ? {...p,followers_count:(p.followers_count||0)+(isFollowing?-1:1)} : p));
+    setUser(prev => ({ ...prev, following_count:(prev.following_count||0)+(isFollowing?-1:1) }));
+    if (isFollowing) await supabase.from("follows").delete().match({ follower_id:user.id, following_id:targetId });
+    else              await supabase.from("follows").insert({ follower_id:user.id, following_id:targetId });
+  }, [followingIds, user?.id]);
+
+  const handleOpenEditModal = useCallback(() => {
+    setEditName(user.name); setEditHandle(user.handle); setEditBio(user.bio); setEditUni(user.university);
+    setEditFaculty(user.faculty || ""); setEditRelationship(user.relationshipStatus || "Single");
+    setEditGender(user.gender || "Male"); setEditPhone(user.phone || "");
+    setEditHobby(user.hobby ? user.hobby.replace(/^I love\s+/i, "") : "");
+    setIsEditModalOpen(true);
+  }, [user]);
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    let fmtHandle = editHandle.trim();
+    if (!fmtHandle.startsWith("@")) fmtHandle = "@" + fmtHandle;
+    const hobbyFmt = editHobby.trim() ? `I love ${editHobby.trim()}` : "";
+    const updated = {
+      ...user,
+      name:             editName.trim(),
+      handle:           fmtHandle,
+      bio:              editBio.trim(),
+      university:       editUni.trim(),
+      faculty:          editFaculty,
+      relationshipStatus: editRelationship,
+      gender:           editGender,
+      phone:            editPhone.trim(),
+      hobby:            hobbyFmt,
+    };
+    setUser(updated);
+    if (user.id && user.id !== "me") {
+      const [first, ...rest] = (editName.trim()).split(" ");
+      const { error } = await supabase.from("profiles").upsert({
+        id:                    user.id,
+        first_name:            first || "",
+        last_name:             rest.join(" "),
+        name:                  editName.trim(),
+        handle:                fmtHandle,
+        bio:                   editBio.trim(),
+        university:            editUni.trim(),
+        faculty:               editFaculty,
+        relationship_status:   editRelationship,
+        gender:                editGender,
+        phone:                 editPhone.trim(),
+        hobby:                 hobbyFmt,
+        avatar_url:            user.avatarUrl || null,
+        cover_url:             user.coverUrl  || null,
+        updated_at:            new Date().toISOString(),
+      }, { onConflict:"id" });
+      if (error) console.error("Supabase profile upsert error:", error);
+    }
+    setIsEditModalOpen(false);
+    showToast("Profile updated ✨");
+  };
+
+  const handleViewProfile   = useCallback((profileId) => { if (profileId == null) return; setViewingProfileId(profileId); setActiveTab("profile"); }, []);
+  const handleExitProfile   = useCallback(() => { setViewingProfileId(null); setActiveTab("home"); }, []);
+
+  // Leaderboard rows use demo IDs that may not map to a real profile. Only
+  // navigate when we can resolve an actual profile, so an avatar tap never
+  // lands on a blank profile screen.
+  const handleLeaderboardAvatar = useCallback((u) => {
+    if (!u) return;
+    if (u.id === user?.id || u.id === "me") { handleViewProfile(user.id); return; }
+    const match = appProfiles.find(p => p.id === u.id || p.name === u.name);
+    if (match) handleViewProfile(match.id);
+  }, [appProfiles, user?.id, handleViewProfile]);
+  const handleImagePreview  = useCallback(({ type, user:previewUser }) => setImagePreview({ type, user:previewUser }), []);
+
+  const handleVerified = useCallback((method) => {
+    const isWhite = method.startsWith("white");
+    if (method === "blue_tokens")  setTokens(prev => prev - TOKEN_ECONOMY.tokensToVerify);
+    if (method === "white_tokens") setTokens(prev => prev - TOKEN_ECONOMY.whiteTokenCost);
+    setUser(prev => ({ ...prev, verified:true, verifiedType:isWhite?"white":"blue" }));
+    showToast(isWhite ? "⚪ White Verified — Campus Elite!" : "🔵 Blue Verified!");
+  }, [showToast]);
+
+  const handleEarnedTokens = useCallback((amount) => {
+    setTokens(prev => prev + amount);
+    setUser(prev => ({ ...prev, tokens:(prev.tokens||0)+amount }));
+    showToast(`+${amount} tokens earned 🪙`);
+  }, [showToast]);
+
+  const addPoints = useCallback((action) => {
+    const pts = POINT_ACTIONS[action] || 0;
+    if (!pts) return;
+    setUserScore(prev => {
+      const next = prev + pts;
+      if (Math.floor(prev/50) < Math.floor(next/50)) setTimeout(() => showToast(`🏆 +${pts} pts — ranking up!`), 100);
+      return next;
+    });
+    setUser(prev => ({ ...prev, score:(prev.score||0)+pts }));
+  }, [showToast]);
+
+  const handleSpendTokens = useCallback((amount) => {
+    if (amount < 0) handleEarnedTokens(-amount);
+    else { setTokens(prev => Math.max(0,prev-amount)); setUser(prev => ({ ...prev, tokens:Math.max(0,(prev.tokens||0)-amount) })); }
+  }, [handleEarnedTokens]);
+
+  const handleUnsaveArchived = useCallback((postId) => {
+    setSavedArchive(prev => prev.filter(p => p.id !== postId));
+    setFeedPosts(prev => prev.map(p => p.id===postId?{...p,saved:false,saves:Math.max(0,(p.saves||0)-1)}:p));
+    setMyVideoPosts(prev => prev.map(p => p.id===postId?{...p,saved:false,saves:Math.max(0,(p.saves||0)-1)}:p));
+  }, []);
+
+  const handleBackupToGmail = useCallback((postsToBackup) => {
+    if (!postsToBackup || postsToBackup.length === 0) { showToast("No saved posts to back up"); return; }
+    const lines = postsToBackup.map((p,i) => `${i+1}. ${p.author||"Unknown"} (${p.authorVerifiedAtSave?"Verified":"Unverified"})\n${(p.content||p.caption||"").slice(0,300)}\n${(p.likes||0)} likes\n`).join("\n");
+    const subject = encodeURIComponent("Glimacy — Saved Posts Backup");
+    const body    = encodeURIComponent(`Saved posts:\n\n${lines}\nExported ${new Date().toLocaleString()}`);
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`, "_blank", "noopener,noreferrer");
+    showToast("Opening Gmail…");
+  }, [showToast]);
+
+  const openStoryViewer  = useCallback((idx) => { if (idx >= 0) setStoryViewerIndex(idx); }, []);
+  const closeStoryViewer = useCallback(() => setStoryViewerIndex(null), []);
+
+  const handleRefreshFeed = useCallback(async () => {
+    try { const { data:{ session } } = await supabase.auth.getSession(); await fetchDatabasePosts(session?.user?.id||null); showToast("✨ Feed refreshed"); }
+    catch { showToast("Couldn't refresh — check connection"); }
+  }, [showToast]);
+  const handlePullStart = useCallback((e) => { if (activeTab!=="home"||refreshing) return; if ((scrollContainerRef.current?.scrollTop??0)>2) return; pullStartY.current=e.clientY; }, [activeTab, refreshing]);
+  const handlePullMove  = useCallback((e) => { if (pullStartY.current==null) return; const delta=e.clientY-pullStartY.current; if (delta<=0||(scrollContainerRef.current?.scrollTop??0)>2){setPullDistance(0);return;} setPullDistance(Math.min(delta*0.5,90)); }, []);
+  const handlePullEnd   = useCallback(async () => { if (pullStartY.current==null) return; pullStartY.current=null; if(pullDistance>55&&!refreshing){setRefreshing(true);await handleRefreshFeed();setRefreshing(false);}setPullDistance(0); }, [handleRefreshFeed, pullDistance, refreshing]);
+
+  // ── Search/filter memoized ──────────────────────────────────────────────────
+  const cleanQuery            = useMemo(() => searchQuery.toLowerCase().trim(), [searchQuery]);
+  const aggregatedPostsList   = useMemo(() => [...feedPosts,...myVideoPosts], [feedPosts, myVideoPosts]);
+  const getScore              = (p) => (p.likes||0)*3+(p.comments?.length||0)*5+(p.reposts||0)*4+(p.views||0)*0.1;
+  const parseFollowerCount    = (fStr) => { if(!fStr) return 0; if(typeof fStr==="number") return fStr; if(String(fStr).toLowerCase().endsWith("k")) return parseFloat(fStr)*1000; return parseFloat(fStr)||0; };
+  
+  const filteredPostsResults  = useMemo(() => aggregatedPostsList.filter(p=>(p.content||p.caption||"").toLowerCase().includes(cleanQuery)).sort((a,b)=>getScore(b)-getScore(a)), [aggregatedPostsList, cleanQuery]);
+  const allAvailableProfiles  = useMemo(() => [user,...appProfiles].filter((v,i,a)=>a.findIndex(v2=>v2.id===v.id)===i), [user, appProfiles]);
+  const filteredFriendsResults= useMemo(() => allAvailableProfiles.filter(p=>{const n=p.name||"";const h=p.handle||"";return n.toLowerCase().includes(cleanQuery)||h.toLowerCase().includes(cleanQuery);}).sort((a,b)=>parseFollowerCount(b.followers_count??b.followers)-parseFollowerCount(a.followers_count??a.followers)), [allAvailableProfiles, cleanQuery]);
+  const filteredTagsResults   = useMemo(() => aggregatedPostsList.filter(p=>{const body=(p.content||p.caption||"").toLowerCase();const tag=cleanQuery.startsWith("#")?cleanQuery:`#${cleanQuery}`;return body.includes(cleanQuery)||body.includes(tag);}).sort((a,b)=>getScore(b)-getScore(a)), [aggregatedPostsList, cleanQuery]);
+
+  const viewingProfile = viewingProfileId ? appProfiles.find(p => p.id===viewingProfileId)||null : null;
+  const isOwnProfile   = !viewingProfileId || viewingProfileId === user?.id || viewingProfileId === "me";
+  // Fall back to the current user if a tapped avatar references a profile we
+  // can't resolve — guarantees the profile screen never renders blank/stuck.
+  const profileToShow  = isOwnProfile ? user : (viewingProfile || user);
+
+  const trendingUserIds = useMemo(() => {
+    const scoreMap = {};
+    aggregatedPostsList.forEach(p => { scoreMap[p.authorId] = (scoreMap[p.authorId]||0)+getScore(p); });
+    return new Set(Object.entries(scoreMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([id])=>id));
+  }, [aggregatedPostsList]);
+
+  const statusFeedForBar = useMemo(() => {
+    const nowTs = Date.now();
+    const myActiveStatusItems = myStatusItems.filter(it => nowTs-it.createdAt < STATUS_TTL_MS);
+    const otherStatusesActive = otherStatuses.map(s=>({...s,items:s.items.filter(it=>nowTs-it.createdAt<STATUS_TTL_MS)})).filter(s=>s.items.length>0);
+    return [
+      { userId:user.id, name:"Your Story", handle:user.handle, seed:user.seed||user.name, avatarUrl:user.avatarUrl, verified:!!user.verified, isMe:true, trending:false, items:myActiveStatusItems },
+      ...otherStatusesActive.map(s=>({...s,isMe:false,trending:trendingUserIds.has(s.userId)})).sort((a,b)=>(b.trending?1:0)-(a.trending?1:0)),
+    ];
+  }, [myStatusItems, otherStatuses, trendingUserIds, user]);
+
+  const profileStatusIndex     = profileToShow ? statusFeedForBar.findIndex(s => s.userId===profileToShow.id) : -1;
+  const profileHasActiveStory  = profileStatusIndex >= 0 && statusFeedForBar[profileStatusIndex].items.length > 0;
+  
+  const displayedHomePosts     = useMemo(() => {
+    const sorted = [...feedPosts].sort((a,b) => getScore(b)-getScore(a));
+    return homeFeedTab==="trending" ? sorted : feedPosts;
+  }, [feedPosts, homeFeedTab]);
+  
+  const computedWorldRank      = Math.max(1, Math.floor(Math.max(0,(10000-userScore)/50)+1));
+  const computedCampusRank     = Math.max(1, Math.floor(Math.max(0,(1000-userScore)/25)+1));
+  const rankedUser             = { ...user, score:userScore, worldRank:computedWorldRank, campusRank:computedCampusRank };
+  const unreadMsgCount         = 4;
+
+  // ── Global CSS ────────────────────────────────────────────────────────────
+  const globalStyles = `
+    @keyframes coverShimmer{0%{background-position:0 0}100%{background-position:800px 0}}
+    @keyframes heartPop{0%{transform:scale(1)}30%{transform:scale(1.5) rotate(-10deg)}60%{transform:scale(0.9) rotate(5deg)}100%{transform:scale(1)}}
+    @keyframes bookmarkPop{0%{transform:scale(1)}40%{transform:scale(1.35)}70%{transform:scale(0.92)}100%{transform:scale(1)}}
+    @keyframes storyPulse{0%,100%{box-shadow:0 0 0 0 ${PURPLE_GLOW};}50%{box-shadow:0 0 0 6px ${PURPLE_GLOW};}}
+    @keyframes overlayFadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes modalSlideUp{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}
+    @keyframes toastPop{0%{opacity:0;transform:translate(-50%,16px) scale(0.92)}10%{opacity:1;transform:translate(-50%,0) scale(1)}88%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,12px) scale(0.95)}}
+    @keyframes pullSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    @keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes pageTurn{0%{transform:perspective(1400px) rotateY(-24deg) translateX(7%) scale(0.985);opacity:0;filter:brightness(0.82)}55%{opacity:1}100%{transform:perspective(1400px) rotateY(0deg) translateX(0) scale(1);opacity:1;filter:brightness(1)}}
+    @keyframes rankPop{0%{transform:scale(1)}50%{transform:scale(1.25) rotate(-3deg)}100%{transform:scale(1)}}
+    @keyframes glowPulse{0%,100%{box-shadow:0 0 8px ${PURPLE_GLOW}}50%{box-shadow:0 0 20px ${PURPLE_GLOW},0 0 40px rgba(124,58,237,0.2)}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    *{box-sizing:border-box;}
+    html,body{max-width:430px;margin:0 auto;overscroll-behavior:none;}
+    button,input,textarea{font-family:inherit;}
+    ::-webkit-scrollbar{width:3px;height:3px;}
+    ::-webkit-scrollbar-thumb{background:${PURPLE_DIM};border-radius:2px;}
+    .page-turn {
+      animation: pageTurn 0.44s cubic-bezier(0.22, 1, 0.36, 1) both;
+      transform-origin: left center;
+      will-change: transform, opacity;
+      backface-visibility: hidden;
+    }
+    @media (prefers-reduced-motion: reduce){
+      .page-turn { animation: fadeIn 0.2s ease both; }
+    }
+  `;
+
+  if (isAuthLoading) return (
+    <div style={{ background:OFF_BLACK, height:"100vh", display:"flex", justifyContent:"center", alignItems:"center", color:PURPLE, fontFamily:"system-ui,sans-serif" }}>
+      <style>{globalStyles}</style>
+      <div style={{ textAlign:"center", animation:"cardIn 0.5s ease" }}>
+        <div style={{ fontSize:48, marginBottom:12, animation:"storyPulse 2s ease-in-out infinite", color:PURPLE }}>✦</div>
+        <div style={{ fontSize:22, fontWeight:800, letterSpacing:1, color:PURPLE }}>Glimacy</div>
+      </div>
+    </div>
+  );
+
+  if (!isLoggedIn) return <Login T={T}/>;
+
+  const isOnProfile = activeTab === "profile";
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      <div className="w-full max-w-sm rounded-[24px] p-6 relative text-center border shadow-2xl" style={{ background: T.isDark ? "#0A0012" : "#fff", borderColor: PURPLE_BD }}>
-        <button onClick={onClose} className="absolute top-4 right-4 bg-transparent border-none cursor-pointer" style={{ color:T.muted }}><X size={18}/></button>
-        
-        {step === "options" && (
-          <>
-            <div className="flex gap-2 mb-4">
-              {["blue","white"].map(t => (
-                <button key={t} onClick={() => setTab(t)} className="flex-1 py-2 rounded-xl border-2 font-bold text-[13px] cursor-pointer flex items-center justify-center gap-1.5" style={{ borderColor: tab===t?PURPLE:T.inputBorder, background: tab===t ? PURPLE_DIM : "transparent", color: tab===t ? WHITE : T.muted }}>
-                  <GlimacyBadge type={t} size={13}/> {t === "blue" ? "Blue Badge" : "White Badge"}
+    <div style={{ backgroundColor:T.bg, color:T.text, minHeight:"100vh", maxWidth:430, margin:"0 auto", fontFamily:"system-ui,-apple-system,sans-serif", display:"flex", flexDirection:"column", position:"relative", overflowX:"hidden" }}>
+      <style>{globalStyles}</style>
+
+      {/* Global Verify Modal */}
+      {verifyModalOpen && (
+        <VerifyModal
+          T={T} tokens={tokens} user={user}
+          onClose={() => setVerifyModalOpen(false)}
+          onVerified={(method) => { handleVerified(method); setVerifyModalOpen(false); }}
+          onEarnedTokens={handleEarnedTokens}
+        />
+      )}
+
+      {/* 4-icon App Header (Fixed & dynamically slides out for Immersive scroll) */}
+      {!isOnProfile && (
+        <div style={{
+          position: "fixed", top: 0, left: "50%", zIndex: 50,
+          width: "100%", maxWidth: 430,
+          transform: headerVisible ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(-100%)",
+          opacity: headerVisible ? 1 : 0,
+          pointerEvents: headerVisible ? "auto" : "none",
+          transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease"
+        }}>
+          <AppHeader
+            T={T} user={user}
+            onAvatarClick={() => handleViewProfile(user.id)}
+            onSearchClick={() => setActiveTab("search")}
+            onFeedbackClick={() => setSettingsOpen(true)}
+            onSettingsClick={() => setSettingsOpen(true)}
+            onMessagesClick={() => setActiveTab("messages")}
+            unreadMessages={unreadMsgCount}
+          >
+            {user.avatarUrl ? (
+              <div style={{ width:32, height:32, borderRadius:"50%", overflow:"hidden", border:`2px solid ${PURPLE}` }}>
+                <img src={user.avatarUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+              </div>
+            ) : (
+              <Avatar seed={user.name} T={T} glow/>
+            )}
+          </AppHeader>
+        </div>
+      )}
+
+      {/* Main scroll area (Dynamic Full-Screen Immersive Padding) */}
+      <div
+        ref={scrollContainerRef}
+        style={{ 
+          flex:1, 
+          overflowY:"auto",
+          height: "100vh",
+          paddingTop: (!isOnProfile && headerVisible) ? 60 : 0,
+          paddingBottom: (!isOnProfile && headerVisible) ? 82 : 0,
+          transition: "padding-top 0.4s cubic-bezier(0.16, 1, 0.3, 1), padding-bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1)"
+        }}
+        onScroll={handleMainScroll}
+        onPointerDown={handlePullStart}
+        onPointerMove={handlePullMove}
+        onPointerUp={handlePullEnd}
+        onPointerCancel={handlePullEnd}
+      >
+        {/* ── HOME ── */}
+        {activeTab === "home" && (
+          <div className="page-turn" style={{ display:"flex", flexDirection:"column", gap:12, padding:"14px" }}>
+            {(pullDistance > 0 || refreshing) && (
+              <div style={{ display:"flex", justifyContent:"center", alignItems:"center", height:refreshing?40:pullDistance, transition:refreshing?"height 0.2s ease":"none" }}>
+                <RefreshCw size={20} color={PURPLE} style={{ animation:refreshing?"pullSpin 0.7s linear infinite":"none", transform:refreshing?undefined:`rotate(${Math.min(pullDistance*4,280)}deg)`, opacity:Math.min((refreshing?40:pullDistance)/50,1) }}/>
+              </div>
+            )}
+            <StoryBar T={T} statusFeed={statusFeedForBar} seenIds={seenStatusItemIds} onAvatarClick={openStoryViewer} onAddClick={() => setStatusComposerOpen(true)} onViewProfile={handleViewProfile}/>
+            <ActionBannerBtns T={T} user={user} tokens={tokens} onVerifyClick={() => setVerifyModalOpen(true)} onEarnClick={() => setVerifyModalOpen(true)}/>
+            <div style={{ display:"flex", borderRadius:12, overflow:"hidden", border:`1px solid ${PURPLE_BD}`, flexShrink:0 }}>
+              {[{id:"friends",label:"👥 Friends"},{id:"trending",label:"🔥 Trending"}].map(tab => (
+                <button key={tab.id} onClick={() => setHomeFeedTab(tab.id)} style={{ flex:1, padding:"10px 0", border:"none", fontSize:13, fontWeight:homeFeedTab===tab.id?700:500, cursor:"pointer", transition:"all 0.2s", background:homeFeedTab===tab.id?PURPLE:"transparent", color:homeFeedTab===tab.id?WHITE:T.muted }}>
+                  {tab.label}
                 </button>
               ))}
             </div>
-
-            {tab === "blue" && (
-              <>
-                <div className="text-3xl mb-2">🔵</div>
-                <h3 className="m-0 text-base font-extrabold" style={{ color:PURPLE }}>Blue Verified</h3>
-                <p className="mt-1 mb-4 text-[12px]" style={{ color:T.muted }}>Premium flow — use 500 tokens or pay ₦500</p>
-                <div className="flex flex-col gap-2">
-                  {canBlueTokens ? (
-                    <button onClick={() => { onVerified("blue_tokens"); onClose(); }} className="py-3 rounded-xl border-none bg-purple-600 font-extrabold text-[13px] text-white cursor-pointer">
-                      🪙 Use 500 Tokens
-                    </button>
-                  ) : (
-                    <button onClick={() => setStep("watchAd")} className="py-3 rounded-xl border font-bold text-[13px] cursor-pointer" style={{ borderColor: PURPLE_BD, background: PURPLE_DIM, color: PURPLE }}>
-                      📺 Watch Ads (need {TOKEN_ECONOMY.tokensToVerify - tokens} more)
-                    </button>
-                  )}
-                  <button onClick={() => setStep("cardPay")} className="py-3 rounded-xl border-none bg-purple-600 font-extrabold text-[13px] text-white cursor-pointer">
-                    💳 Pay ₦{TOKEN_ECONOMY.cardVerifyPrice}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {tab === "white" && (
-              <>
-                <div className="text-3xl mb-2">⚪</div>
-                <h3 className="m-0 text-base font-extrabold text-white">White Verified</h3>
-                <p className="mt-1 mb-2 text-[12px]" style={{ color:T.muted }}>Campus Elite — milestones criteria:</p>
-                <div className="border rounded-xl p-3 mb-4 text-left text-[12px]" style={{ background:PURPLE_DIM, borderColor:PURPLE_BD }}>
-                  {[
-                    [`At least 20 verified followers (${verifiedFollowers}/20)`, verifiedFollowers >= 20],
-                    [`At least 50 posts made (${userPostCount}/50)`,         userPostCount >= 50],
-                    [`Cost: 10,000 tokens OR ₦2,500`,    true],
-                  ].map(([label, met], i) => (
-                    <div key={i} className="flex items-center gap-2 py-1 font-medium" style={{ color: met ? "#22c55e" : T.muted }}>
-                      <span>{met ? "✅" : "❌"}</span> {label}
-                    </div>
-                  ))}
-                </div>
-                {!canWhite && <p className="text-[11px] text-red-500 mb-3">Milestone criteria standard metrics incomplete</p>}
-                <div className="flex flex-col gap-2">
-                  <button disabled={!canWhiteTokens} onClick={() => canWhiteTokens && (onVerified("white_tokens"), onClose())} className="py-3 rounded-xl border-none font-extrabold text-[13px] text-white cursor-pointer" style={{ background: canWhiteTokens ? PURPLE : T.inputBg, color: canWhiteTokens ? WHITE : T.muted }}>
-                    🪙 Use 10,000 Tokens
-                  </button>
-                  <button disabled={!canWhite} onClick={() => canWhite && setStep("cardPayWhite")} className="py-3 rounded-xl border-none font-extrabold text-[13px] text-white cursor-pointer" style={{ background: canWhite ? PURPLE : T.inputBg, color: canWhite ? WHITE : T.muted }}>
-                    💳 Pay ₦2,500
-                  </button>
-                </div>
-              </>
-            )}
-          </>
-        )}
-
-        {(step === "watchAd" || step === "watchingAd") && (
-          <>
-            <div className="text-4xl mb-2">📺</div>
-            <h3 className="m-0 text-base font-extrabold" style={{ color:PURPLE }}>{step === "watchingAd" ? "Streaming Ad Frame…" : "Earn Verification Tokens"}</h3>
-            {step === "watchingAd" ? (
-              <div className="mt-4">
-                <div className="h-2 rounded-full overflow-hidden w-full bg-neutral-800">
-                  <div className="h-full bg-purple-600 transition-all duration-75" style={{ width: `${watchProgress}%` }} />
-                </div>
-                <span className="text-xs text-neutral-400 mt-1 block">{watchProgress}%</span>
-              </div>
-            ) : (
-              <>
-                <p className="text-xs text-neutral-400 mb-4">Balance: {tokens} tokens · Earnings total package: +{TOKEN_ECONOMY.tokensPerAd}</p>
-                <button onClick={watchAd} className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold cursor-pointer mb-2 flex items-center justify-center gap-2"><PlayCircle size={16}/> Load Advertisement</button>
-                <button onClick={() => setStep("options")} className="w-full py-2 rounded-xl bg-transparent border border-neutral-700 text-neutral-400 font-medium cursor-pointer">← Back</button>
-              </>
-            )}
-          </>
-        )}
-
-        {(step === "cardPay" || step === "cardPayWhite") && (
-          <>
-            <div className="text-4xl mb-2">💳</div>
-            <h3 className="m-0 text-base font-extrabold text-white">Secure Gateway Portal</h3>
-            <div className="flex flex-col gap-3 my-4 text-left">
-              <div>
-                <label className="text-[11px] block mb-1" style={{ color:T.muted }}>Card PAN Identifier</label>
-                <input placeholder="0000 0000 0000 0000" className="w-full px-3 py-2 rounded-lg border outline-none text-xs" style={{ background:T.inputBg, borderColor:PURPLE_BD, color:T.text }}/>
-              </div>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="text-[11px] block mb-1" style={{ color:T.muted }}>Validity Timeline</label>
-                  <input placeholder="MM/YY" className="w-full px-3 py-2 rounded-lg border outline-none text-xs" style={{ background:T.inputBg, borderColor:PURPLE_BD, color:T.text }}/>
-                </div>
-                <div className="flex-1">
-                  <label className="text-[11px] block mb-1" style={{ color:T.muted }}>CVV</label>
-                  <input placeholder="***" type="password" className="w-full px-3 py-2 rounded-lg border outline-none text-xs" style={{ background:T.inputBg, borderColor:PURPLE_BD, color:T.text }}/>
-                </div>
-              </div>
-            </div>
-            <button onClick={() => { onVerified(step === "cardPayWhite" ? "white_card" : "blue_card"); onClose(); }} className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold cursor-pointer mb-2">Authorize Payment Package</button>
-            <button onClick={() => setStep("options")} className="w-full py-2 rounded-xl bg-transparent border border-neutral-700 text-neutral-400 font-medium cursor-pointer">← Back</button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-});
-
-// ─── SEASON REWARDS PANEL ───────────────────────────────────────────────────
-const SeasonRewards = React.memo(({ T }) => (
-  <div className="p-4 rounded-2xl mb-4 border" style={{ ...glass(T), borderColor: PURPLE_BD }}>
-    <div className="flex items-center gap-2 mb-3">
-      <Gift size={18} color={PURPLE}/>
-      <div className="font-extrabold text-[15px]" style={{ color:T.text }}>Season 1 Cash Rewards</div>
-      <div className="ml-auto rounded-lg px-2 py-0.5 text-[11px] font-bold" style={{ background:PURPLE_DIM, border:`1px solid ${PURPLE_BD}`, color:PURPLE }}>Coming Soon</div>
-    </div>
-    <p className="m-0 mb-3 text-xs" style={{ color:T.muted }}>Top ranked users inside the leaderboards division tier capture fluid monetary pay-outs.</p>
-    <div className="flex flex-col gap-2">
-      {[[ "🥇 1st Tier Creator Placement", "₦50,000 Fluid Cash + Custom Gold Accents" ], [ "🥈 2nd Tier Creator Placement", "₦25,000 Fluid Cash + Custom Silver Accents" ], [ "🥉 3rd Tier Creator Placement", "₦10,000 Fluid Cash + Custom Bronze Accents" ]].map(([tier, payout], i) => (
-        <div key={i} className="flex items-center justify-between border rounded-xl px-3 py-2.5 bg-black/30" style={{ borderColor:PURPLE_BD }}>
-          <span className="font-bold text-[13px]" style={{ color:T.text }}>{tier}</span>
-          <span className="text-xs font-semibold" style={{ color:PURPLE }}>{payout}</span>
-        </div>
-      ))}
-    </div>
-  </div>
-));
-
-// ─── AD BOOST VIEW ───────────────────────────────────────────────────────────
-const AdBoostView = React.memo(({ T, tokens, onSpendTokens, onEarnClick }) => {
-  const [selectedTier, setSelectedTier] = useState(null);
-  const [gender, setGender] = useState("Both");
-  const [payMethod, setPayMethod] = useState("card");
-  const [step, setStep] = useState("build");
-
-  const tier = AD_TIERS[selectedTier];
-  const cost = tier ? tokenCost(tier.price) : 0;
-  const canAfford = tokens >= cost;
-
-  return (
-    <div className="pb-24">
-      <div className="p-4 border-b sticky top-0 backdrop-blur-md z-10 flex items-center gap-2" style={{ borderColor:T.divider, background: T.isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)" }}>
-        <Megaphone size={19} color={PURPLE}/>
-        <h2 className="m-0 text-base font-black" style={{ color:T.text }}>Campaign Dashboard</h2>
-      </div>
-      <div className="p-4 flex flex-col gap-4">
-        <div onClick={onEarnClick} className="border rounded-2xl p-4 flex items-center gap-3 cursor-pointer" style={{ background: PURPLE_DIM, borderColor: PURPLE_BD }}>
-          <div className="text-2xl">📺</div>
-          <div className="flex-1">
-            <h4 className="m-0 text-xs font-bold" style={{ color: PURPLE }}>Earn Complimentary Campaign Tokens</h4>
-            <p className="m-0 text-[11px] mt-0.5" style={{ color: T.muted }}>Watch full streaming frames to accumulate verification bundles</p>
-          </div>
-          <ChevronRight size={16} color={PURPLE}/>
-        </div>
-
-        <div className="rounded-2xl p-4 border" style={glass(T)}>
-          <div className="text-xs font-bold flex items-center gap-1.5 mb-3" style={{ color:T.text }}><Target size={14} color={PURPLE}/> Target Specification Demographic</div>
-          <div className="flex gap-2">
-            {["Male", "Female", "Both"].map(g => (
-              <button key={g} onClick={() => setGender(g)} className="flex-1 py-2.5 rounded-xl font-bold border-none text-xs cursor-pointer" style={{ background: gender===g?PURPLE:T.inputBg, color: gender===g?WHITE:T.muted }}>{g}</button>
+            {displayedHomePosts.map((post,i) => (
+              <PostCard key={post.id} T={T} post={post} setAllPosts={setFeedPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/>
             ))}
+            <div style={{ opacity:headerVisible?1:0, pointerEvents:headerVisible?"auto":"none", transition:"opacity 0.3s ease" }}>
+              <CreatePostFAB T={T} onClick={() => setIsCreateModalOpen(true)}/>
+            </div>
+            {isCreateModalOpen && (
+              <CreatePostModal T={T} user={user} onClose={() => setIsCreateModalOpen(false)} onPost={(newPost) => { setFeedPosts(prev => [{...newPost,likedBy:[]}, ...prev]); if(addPoints)addPoints("POST_CREATED"); }}/>
+            )}
           </div>
-        </div>
+        )}
 
-        <div className="flex flex-col gap-2">
-          <div className="text-xs font-bold flex items-center gap-1.5 mb-1" style={{ color:T.text }}><TrendingUp size={14} color={PURPLE}/> Choose Scalability Tier Plan</div>
-          {AD_TIERS.map((t, idx) => (
-            <div key={idx} onClick={() => setSelectedTier(idx)} className="rounded-xl p-3 border cursor-pointer transition-all flex items-center justify-between" style={{ borderColor: selectedTier===idx?PURPLE:T.cardBorder, background: selectedTier===idx?PURPLE_DIM:T.cardBg }}>
-              <div>
-                <div className="text-[13px] font-bold" style={{ color:selectedTier===idx?PURPLE:T.text }}>{t.label} Tier Blueprint</div>
-                <div className="text-[11px]" style={{ color:T.muted }}>{t.people.toLocaleString()} Estimated Targets · {t.days} Complete Days</div>
+        {/* ── CONNECT ── */}
+        {activeTab === "connect" && (
+          <div className="page-turn">
+            <ConnectHubView T={T} appProfiles={appProfiles} user={user} followingIds={followingIds} onViewProfile={handleViewProfile} onToggleFollow={handleToggleFollow}/>
+          </div>
+        )}
+
+        {/* ── RANKING ── */}
+        {activeTab === "ranking" && (
+          <div className="page-turn" style={{ display:"flex", flexDirection:"column", gap:12, padding:"14px" }}>
+            <LeaderboardHeader T={T}/>
+            <SeasonRewards T={T}/>
+            <div style={{ background:PURPLE, borderRadius:16, padding:"14px 18px", display:"flex", alignItems:"center", gap:14, boxShadow:`0 4px 24px ${PURPLE_GLOW}`, animation:"glowPulse 3s ease-in-out infinite" }}>
+              <div style={{ fontSize:32 }}>🏆</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:800, fontSize:14, color:WHITE }}>Your Activity Score</div>
+                <div style={{ fontSize:11, color:"rgba(255,255,255,0.75)", marginTop:2 }}>
+                  Like, comment & post to rank up! World #{computedWorldRank} · Campus #{computedCampusRank}
+                </div>
               </div>
-              <div className="text-right">
-                <div className="text-[14px] font-black" style={{ color:T.text }}>₦{t.price}</div>
-                <div className="text-[10px]" style={{ color:T.muted }}>{tokenCost(t.price)} tokens</div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontWeight:900, fontSize:24, color:WHITE, fontVariantNumeric:"tabular-nums" }}>{userScore.toLocaleString()}</div>
+                <div style={{ fontSize:9, color:"rgba(255,255,255,0.7)", fontWeight:700, letterSpacing:"0.5px" }}>TOTAL PTS</div>
               </div>
             </div>
-          ))}
-        </div>
+            <div style={{ ...glass(T, { borderRadius:14 }), padding:"12px 16px" }}>
+              <div style={{ fontWeight:700, fontSize:13, color:T.text, marginBottom:8 }}>⚡ How to Earn Points</div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
+                {Object.entries(POINT_ACTIONS).map(([k,v]) => (
+                  <div key={k} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"5px 8px", borderRadius:8, background:T.inputBg, fontSize:11 }}>
+                    <span style={{ color:T.muted }}>{k.replace(/_/g," ").toLowerCase()}</span>
+                    <span style={{ color:PURPLE, fontWeight:700 }}>+{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <Leaderboard T={T} selfUser={rankedUser} onAvatarClick={handleLeaderboardAvatar} isScrolling={!headerVisible}/>
+          </div>
+        )}
 
-        {selectedTier !== null && (
-          <div className="rounded-2xl p-4 border flex flex-col gap-3 animate-in fade-in zoom-in-95" style={glass(T)}>
-            <div className="flex gap-2">
-              {["card", "tokens"].map(m => (
-                <button key={m} onClick={() => setPayMethod(m)} className="flex-1 py-2.5 rounded-xl font-bold border cursor-pointer text-xs uppercase" style={{ borderColor: payMethod===m?PURPLE:T.inputBorder, background: payMethod===m?PURPLE_DIM:"transparent", color: payMethod===m?PURPLE:T.muted }}>{m}</button>
+        {/* ── NOTIFICATIONS ── */}
+        {activeTab === "notifs" && (
+          <div className="page-turn">
+            <NotificationsView T={T} notifs={notifications} onProfileClick={handleViewProfile}/>
+          </div>
+        )}
+
+        {/* ── MESSAGES (tab) ── */}
+        {activeTab === "messages" && (
+          <div className="page-turn">
+            <MessagesView T={T} user={user} onViewProfile={handleViewProfile}/>
+          </div>
+        )}
+
+        {/* ── ADS ── */}
+        {activeTab === "ads" && (
+          <div className="page-turn">
+            <AdBoostView T={T} user={user} tokens={tokens} onSpendTokens={handleSpendTokens} onEarnClick={() => setVerifyModalOpen(true)}/>
+          </div>
+        )}
+
+        {/* ── SEARCH ── */}
+        {activeTab === "search" && (
+          <div className="page-turn" style={{ padding:14, display:"flex", flexDirection:"column", gap:12 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, background:T.inputBg, border:`1px solid ${PURPLE_BD}`, borderRadius:20, padding:"8px 14px" }}>
+              <Search size={16} color={T.muted}/>
+              <input autoFocus value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Search posts, friends, or tags..." style={{ flex:1, background:"none", border:"none", color:T.text, outline:"none", fontSize:13.5 }}/>
+              {searchQuery && <X size={16} color={T.muted} style={{ cursor:"pointer" }} onClick={() => setSearchQuery("")}/>}
+            </div>
+            <div style={{ display:"flex", borderBottom:`1px solid ${T.divider}` }}>
+              {[{id:"posts",label:"Posts"},{id:"friends",label:"Friends"},{id:"tags",label:"Tags"}].map(sub => (
+                <button key={sub.id} onClick={() => setSearchSubTab(sub.id)} style={{ flex:1, padding:"11px 0", background:"none", border:"none", fontSize:13, fontWeight:searchSubTab===sub.id?700:400, color:searchSubTab===sub.id?PURPLE:T.muted, cursor:"pointer", borderBottom:searchSubTab===sub.id?`2px solid ${PURPLE}`:"2px solid transparent", transition:"all 0.15s" }}>
+                  {sub.label}
+                </button>
               ))}
             </div>
-            {payMethod === "tokens" && !canAfford && <p className="m-0 text-xs text-red-500 font-semibold">Insufficient token assets. Load alternative monetization structures.</p>}
-            <button onClick={() => { if(payMethod==="tokens"&&!canAfford)return; setStep("success"); if(payMethod==="tokens")onSpendTokens(cost); }} className="w-full py-3.5 rounded-xl border-none font-bold text-white text-[13px] cursor-pointer" style={{ background: payMethod==="tokens"&&!canAfford?T.inputBg:PURPLE }}>Launch Selected Campaign Framework</button>
+            <div style={{ display:"flex", flexDirection:"column", gap:12, marginTop:4 }}>
+              {searchSubTab==="posts" && (filteredPostsResults.length > 0 ? filteredPostsResults.map((post,i) => post.type==="video" ? <VideoPostCard key={post.id} T={T} post={post} setAllPosts={setMyVideoPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/> : <PostCard key={post.id} T={T} post={post} setAllPosts={setFeedPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/>) : <EmptyState emoji="📝" title="No matching posts" sub="Try different terms" T={T}/>)}
+              {searchSubTab==="friends" && (filteredFriendsResults.length > 0 ? filteredFriendsResults.map(p => (
+                <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 10px", borderBottom:`1px solid ${T.divider}`, cursor:"pointer", background:T.cardBg, borderRadius:10 }} onClick={() => handleViewProfile(p.id)}>
+                  <Avatar seed={p.seed||p.name} T={T}/>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:600, fontSize:14, display:"flex", alignItems:"center", gap:5 }}>{p.name}{p.verified&&<GlimacyBadge type={p.verifiedType||"blue"} size={13}/>}</div>
+                    <div style={{ fontSize:12, color:T.muted }}>{p.handle||"No handle"}</div>
+                  </div>
+                  {p.id !== user?.id && (
+                    <div onClick={e=>{e.stopPropagation();handleToggleFollow(p.id);}} style={{ padding:4, color:followingIds.has(p.id)?T.text:PURPLE }}>
+                      {followingIds.has(p.id)?<UserCheck size={18}/>:<UserPlus size={18}/>}
+                    </div>
+                  )}
+                </div>
+              )) : <EmptyState emoji="👥" title="No friends found" sub="Check spelling or try someone else" T={T}/>)}
+              {searchSubTab==="tags" && (filteredTagsResults.length > 0 ? filteredTagsResults.map((post,i) => post.type==="video" ? <VideoPostCard key={post.id} T={T} post={post} setAllPosts={setMyVideoPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/> : <PostCard key={post.id} T={T} post={post} setAllPosts={setFeedPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/>) : <EmptyState emoji="#️⃣" title="No matching tags" sub="Try #FUTA, #Tech, etc." T={T}/>)}
+            </div>
           </div>
         )}
-      </div>
-    </div>
-  );
-});
 
-// ─── SETTINGS PANEL ──────────────────────────────────────────────────────────
-const SettingsPanel = React.memo(({ T, open, onClose, themeMode, setThemeMode, onSignOut }) => {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="rounded-t-[24px] pb-8 max-h-[75vh] overflow-y-auto border-t" style={{ background: T.surface, borderColor: T.divider }} onClick={e=>e.stopPropagation()}>
-        <div className="w-9 h-1 rounded-full mx-auto my-3 bg-neutral-700 cursor-pointer" onClick={onClose} />
-        <div className="px-5 pb-3 border-b flex justify-between items-center" style={{ borderColor: T.divider }}>
-          <h3 className="m-0 font-black text-sm" style={{ color: T.text }}>System Adjustments Configuration</h3>
-          <X size={16} className="cursor-pointer" style={{ color:T.muted }} onClick={onClose}/>
-        </div>
-        <div className="flex flex-col">
-          <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: T.divider }}>
-            <span className="text-xs font-bold" style={{ color:T.text }}>Dark Scheme Configuration Mode</span>
-            <button onClick={() => setThemeMode(themeMode==="dark"?"light":"dark")} className="px-4 py-1.5 rounded-lg border-none text-xs font-bold bg-purple-600 text-white cursor-pointer uppercase">{themeMode}</button>
-          </div>
-          <div onClick={onSignOut} className="px-5 py-4 flex items-center gap-2 cursor-pointer text-red-500 font-bold text-xs"><CornerUpLeft size={14}/> Terminate Current Session Authorization</div>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-// ─── MAIN CONTAINER APPLICATION CELL ─────────────────────────────────────────
-export default function App() {
-  const [themeMode, setThemeMode] = useState("dark");
-  const [user, setUser] = useState(MOCK_USER);
-  const [tokens, setTokens] = useState(MOCK_USER.tokens);
-  const [allPosts, setAllPosts] = useState([...INITIAL_FEED_POSTS, ...MY_VIDEO_POSTS]);
-  const [activeTab, setActiveTab] = useState("home");
-  const [viewingProfileId, setViewingProfileId] = useState(null);
-  
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [verifyOpen, setVerifyOpen] = useState(false);
-  const [createPostOpen, setCreatePostOpen] = useState(false);
-
-  const T = themeMode === "light" ? THEMES.light : THEMES.glimacy;
-  const isOnProfile = !!viewingProfileId;
-  const headerVisible = true;
-
-  const handleEarnTokens = useCallback((amt) => setTokens(t => t + amt), []);
-  const handleSpendTokens = useCallback((amt) => setTokens(t => Math.max(0, t - amt)), []);
-  
-  const handleVerified = useCallback((type) => {
-    setUser(prev => ({ ...prev, verified: true, verifiedType: type.includes("white") ? "white" : "blue" }));
-  }, []);
-
-  const statusFeed = useMemo(() => [
-    { userId: "me", name: "Your Story", isMe: true, items: [], seed: "GD" },
-    { userId: "u1", name: "Chinedu Okafor", seed: "CO", trending: true, items: [{ id: "s1", type: "text", content: "Shipping clean UI builds daily 🚀", createdAt: Date.now() }] },
-    { userId: "u2", name: "Amina Yusuf", seed: "AY", trending: false, items: [{ id: "s2", type: "text", content: "LLM local fine-tuning running frames complete.", createdAt: Date.now() }] }
-  ], []);
-
-  const seenIds = useMemo(() => new Set(), []);
-
-  return (
-    <div className="w-full min-h-screen flex justify-center selection:bg-purple-500/30" style={{ background: T.bg, color: T.text }}>
-      
-      {/* GLOBAL KEYFRAME ANIMATION CSS HOOKS */}
-      <style>{`
-        @keyframes storyPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.02); opacity: 0.9; } }
-        .hide-scroll::-webkit-scrollbar { display: none; }
-        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
-
-      <div className="w-full max-w-[430px] min-h-screen flex flex-col relative shadow-2xl border-x overflow-hidden" style={{ borderColor: T.divider, background: T.bg }}>
-        
-        {/* APP RUNTIME CORE ROUTING RENDERS */}
-        {!isOnProfile ? (
-          <>
-            <AppHeader 
-              T={T} user={user} unreadMessages={2}
-              onAvatarClick={() => setViewingProfileId("me")}
-              onSearchClick={() => alert("Search Index Registry Launched")}
-              onFeedbackClick={() => alert("Forward inquiries to: therealglimmar@gmail.com")}
-              onSettingsClick={() => setSettingsOpen(true)}
-              onMessagesClick={() => alert("Encrypted peer node array linking operational")}
+        {/* ── PROFILE ── */}
+        {activeTab === "profile" && profileToShow && (
+          <div className="page-turn">
+            <ProfileView
+              T={T} profileUser={profileToShow} isOwnProfile={isOwnProfile}
+              onBack={handleExitProfile} onEdit={handleOpenEditModal}
+              onVerify={() => setVerifyModalOpen(true)}
+              myVideoPosts={myVideoPosts} feedPosts={feedPosts}
+              setFeedPosts={setFeedPosts} setMyVideoPosts={setMyVideoPosts}
+              onViewProfile={handleViewProfile}
+              isFollowing={followingIds.has(profileToShow.id)}
+              onToggleFollow={handleToggleFollow} onImagePreview={handleImagePreview}
+              onUpdateAvatar={handleUpdateAvatar} onUpdateCover={handleUpdateCover}
+              savedPosts={savedArchive} onBackupToGmail={handleBackupToGmail}
+              onUnsaveArchived={handleUnsaveArchived}
+              hasActiveStory={profileHasActiveStory}
+              onOpenStory={() => openStoryViewer(profileStatusIndex)}
+              onAddStatus={() => setStatusComposerOpen(true)}
+              tokens={tokens}
             />
-            
-            <div className="flex-1 overflow-y-auto pb-24 hide-scroll px-3 pt-2">
-              {activeTab === "home" && (
-                <div className="flex flex-col gap-3">
-                  <StoryBar T={T} statusFeed={statusFeed} seenIds={seenIds} onAvatarClick={(idx)=>alert(`Viewing node indices frame sequence: ${idx}`)} onAddClick={() => alert("Attachment loading platform live")} onViewProfile={(id)=>setViewingProfileId(id)}/>
-                  <ActionBannerBtns T={T} user={user} tokens={tokens} onVerifyClick={() => setVerifyOpen(true)} onEarnClick={() => setVerifyOpen(true)}/>
-                  
-                  <div className="flex flex-col mt-2">
-                    {allPosts.map((post, index) => (
-                      post.type === "video" ? (
-                        <VideoPostCard key={post.id} index={index} T={T} post={post} setAllPosts={setAllPosts} currentUser={user} onViewProfile={(id)=>setViewingProfileId(id)} onPoints={(act)=>alert(`Trigger protocol context updates: ${act}`)}/>
-                      ) : (
-                        <PostCard key={post.id} index={index} T={T} post={post} setAllPosts={setAllPosts} currentUser={user} onViewProfile={(id)=>setViewingProfileId(id)} onPoints={(act)=>alert(`Trigger protocol context updates: ${act}`)}/>
-                      )
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "connect" && <ConnectHubView T={T} onViewProfile={(id) => setViewingProfileId(id)} />}
-              {activeTab === "ranking" && (
-                <div className="flex flex-col pt-2">
-                  <SeasonRewards T={T}/>
-                  <LeaderboardHeader T={T}/>
-                  <Leaderboard T={T} onViewProfile={(id)=>setViewingProfileId(id)}/>
-                </div>
-              )}
-              {activeTab === "notifs" && <NotificationsView T={T} onViewProfile={(id) => setViewingProfileId(id)} />}
-              {activeTab === "ads" && <AdBoostView T={T} tokens={tokens} onSpendTokens={handleSpendTokens} onEarnClick={() => setVerifyOpen(true)}/>}
-            </div>
-          </>
-        ) : (
-          /* PROFILE DISPLAY PORTAL SUB-ROUTING HOOK */
-          <div className="flex-1 flex flex-col h-full overflow-y-auto hide-scroll">
-            <div className="p-3 border-b flex items-center gap-3 sticky top-0 z-50 backdrop-blur-md" style={{ borderColor:T.divider, background:T.surface }}>
-              <button onClick={() => setViewingProfileId(null)} className="p-1.5 rounded-xl bg-transparent border-none cursor-pointer flex items-center justify-center hover:bg-neutral-800 transition-colors" style={{ color:T.text }}>
-                <ArrowLeft size={19} strokeWidth={2.5}/>
-              </button>
-              <div className="font-bold text-xs uppercase tracking-wider" style={{ color:T.muted }}>Account Context Document View</div>
-            </div>
-            
-            <div className="p-3 flex-1">
-              {viewingProfileId === "me" ? (
-                <ProfileView T={T} user={user} isMe={true} posts={allPosts.filter(p=>p.authorId==="me")} />
-              ) : (
-                (() => {
-                  const targetProfile = MOCK_PROFILES.find(p => p.id === viewingProfileId) || MOCK_PROFILES[0];
-                  return <ProfileView T={T} user={targetProfile} isMe={false} posts={allPosts.filter(p=>p.authorId===viewingProfileId)} />;
-                })()
-              )}
-            </div>
           </div>
         )}
-
-        {/* 5. POLISHED 5-TAB BOTTOM NAVIGATION DOCK COMPONENT[cite: 1] */}
-        {!isOnProfile && (
-          <div style={{
-            position: "fixed", 
-            bottom: 0, 
-            left: "50%", 
-            width: "100%", 
-            maxWidth: 430,
-            background: T.isDark ? "rgba(10, 0, 18, 0.85)" : "rgba(255, 255, 255, 0.85)",
-            backdropFilter: "blur(20px)", 
-            borderTop: `1px solid ${PURPLE_BD}`,
-            display: "flex", 
-            justifyContent: "space-around", 
-            padding: "10px 0 20px", 
-            zIndex: 40,
-            opacity: headerVisible ? 1 : 0, 
-            transform: headerVisible ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(100%)",
-            pointerEvents: headerVisible ? "auto" : "none", 
-            transition: "opacity 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
-            boxShadow: "0 -4px 30px rgba(0,0,0,0.1)"
-          }}>
-            {BOTTOM_NAV.map(({ id, Icon, label }) => {
-              const isActive = activeTab === id;
-              return (
-                <div key={id} onClick={() => { setActiveTab(id); if(id==="profile")setViewingProfileId(null); }}
-                  className="flex flex-col items-center gap-1.5 flex-1 cursor-pointer transition-all duration-300"
-                  style={{ 
-                    color: isActive ? PURPLE : T.muted, 
-                    transform: isActive ? "translateY(-4px)" : "translateY(0)" 
-                  }}>
-                  <div className="relative transition-transform duration-300" style={{ filter: isActive ? `drop-shadow(0 4px 10px ${PURPLE_GLOW})` : 'none', transform: isActive ? "scale(1.15)" : "scale(1)" }}>
-                    <Icon size={22} strokeWidth={isActive ? 2.5 : 2}/>
-                    {id==="ads" && <span className="absolute -top-1.5 -right-2 bg-pink-500 text-white text-[8px] font-black rounded-full px-1.5 py-0.5 leading-none shadow-sm animate-pulse">NEW</span>}
-                  </div>
-                  <span className="text-[10px] tracking-wide" style={{ fontWeight: isActive ? 800 : 500 }}>{label}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* MODAL GLOBAL REGISTRY CONTROLLERS */}
-        <SettingsPanel T={T} open={settingsOpen} onClose={()=>setSettingsOpen(false)} themeMode={themeMode} setThemeMode={setThemeMode} onSignOut={()=>alert("Session closed payload issued")}/>
-        {verifyOpen && <VerifyModal T={T} tokens={tokens} user={user} onClose={()=>setVerifyOpen(false)} onVerified={handleVerified} onEarnedTokens={handleEarnTokens}/>}
-        
       </div>
+
+      {/* ── 5-TAB BOTTOM NAV ── */}
+      {!isOnProfile && (
+        <div style={{
+          position: "fixed", 
+          bottom: 0, 
+          left: "50%", 
+          width: "100%", 
+          maxWidth: 430,
+          background: T.isDark ? "rgba(10, 0, 18, 0.85)" : "rgba(255, 255, 255, 0.85)",
+          backdropFilter: "blur(20px)", 
+          borderTop: `1px solid ${PURPLE_BD}`,
+          display: "flex", 
+          justifyContent: "space-around", 
+          padding: "10px 0 20px", 
+          zIndex: 40,
+          opacity: headerVisible ? 1 : 0, 
+          transform: headerVisible ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(100%)",
+          pointerEvents: headerVisible ? "auto" : "none", 
+          transition: "opacity 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+          boxShadow: "0 -4px 30px rgba(0,0,0,0.1)"
+        }}>
+          {BOTTOM_NAV.map(({ id, Icon, label }) => {
+            const isActive = activeTab === id;
+            return (
+              <div key={id} onClick={() => { setActiveTab(id); if(id==="profile")setViewingProfileId(null); }}
+                className="flex flex-col items-center gap-1.5 flex-1 cursor-pointer transition-all duration-300"
+                style={{ 
+                  color: isActive ? PURPLE : T.muted, 
+                  transform: isActive ? "translateY(-4px)" : "translateY(0)" 
+                }}>
+                <div className="relative transition-transform duration-300" style={{ filter: isActive ? `drop-shadow(0 4px 10px ${PURPLE_GLOW})` : 'none', transform: isActive ? "scale(1.15)" : "scale(1)" }}>
+                  <Icon size={22} strokeWidth={isActive ? 2.5 : 2}/>
+                  {id==="ads" && <span className="absolute -top-1.5 -right-2 bg-pink-500 text-white text-[8px] font-black rounded-full px-1.5 py-0.5 leading-none shadow-sm animate-pulse">NEW</span>}
+                </div>
+                <span className="text-[10px] tracking-wide" style={{ fontWeight: isActive ? 800 : 500 }}>{label}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modals */}
+      {isEditModalOpen && (
+        <EditProfileModal
+          T={T} user={user}
+          editName={editName}         setEditName={setEditName}
+          editHandle={editHandle}     setEditHandle={setEditHandle}
+          editBio={editBio}           setEditBio={setEditBio}
+          editUni={editUni}           setEditUni={setEditUni}
+          editFaculty={editFaculty}   setEditFaculty={setEditFaculty}
+          editRelationship={editRelationship} setEditRelationship={setEditRelationship}
+          editGender={editGender}     setEditGender={setEditGender}
+          editPhone={editPhone}       setEditPhone={setEditPhone}
+          editHobby={editHobby}       setEditHobby={setEditHobby}
+          onSave={handleSaveProfile}  onClose={() => setIsEditModalOpen(false)}
+        />
+      )}
+      {statusComposerOpen && (
+        <StatusComposerModal T={T} onClose={() => setStatusComposerOpen(false)}
+          onSubmit={(partial) => { setMyStatusItems(prev=>[{id:uid("st"),createdAt:Date.now(),...partial},...prev]); setStatusComposerOpen(false); showToast("Status posted to your story!"); }}
+        />
+      )}
+      {storyViewerIndex !== null && (
+        <StoryViewerModal
+          T={T} statusFeed={statusFeedForBar} startIndex={storyViewerIndex}
+          seenIds={seenStatusItemIds} setSeenIds={setSeenStatusItemIds}
+          onDeleteMyItem={(itemId) => setMyStatusItems(prev=>prev.filter(it=>it.id!==itemId))}
+          onClose={closeStoryViewer}
+          statusLikes={statusLikes} setStatusLikes={setStatusLikes}
+          statusViews={statusViews} setStatusViews={setStatusViews}
+          currentUser={user} onPoints={addPoints} onViewProfile={handleViewProfile}
+        />
+      )}
+
+      <Toast T={T} message={toast}/>
+      <SettingsPanel
+        T={T} open={settingsOpen} onClose={() => setSettingsOpen(false)}
+        themeMode={themeMode} setThemeMode={setThemeMode}
+        onSignOut={() => supabase.auth.signOut()}
+        onFeedback={() => {}}
+      />
     </div>
   );
 }
