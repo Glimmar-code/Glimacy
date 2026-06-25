@@ -3,14 +3,14 @@
  * Colors: BLACK · DEEP PURPLE · WHITE  (Spotify feel — zero light-purple/pink)
  * Header: Search · Feedback · Settings · Messages  (4 top-right icons)
  * Verified:
- *   — Blue  tick : existing token/card flow (Premium/Pro)
- *   — White tick : ₦2,500 OR 10,000 tokens  +  20 verified followers  +  50 posts
+ * — Blue  tick : existing token/card flow (Premium/Pro)
+ * — White tick : ₦2,500 OR 10,000 tokens  +  20 verified followers  +  50 posts
  * All posts are public & appear on the creator's profile (posts / liked / saved)
  * handleSaveProfile: full upsert to Supabase profiles table
  * Season Rewards section in Ranking (cash prizes — coming soon banner)
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Home, Users, Trophy, Bell, Send, Search,
   Heart, MessageCircle, Repeat2, Bookmark, Eye,
@@ -48,7 +48,6 @@ export const CARD_BLACK   = "#110020";   // card surface
 export const WHITE        = "#FFFFFF";
 export const OFF_WHITE    = "#EDE8FF";   // slightly warm white for text
 
-// Kept as GOLD aliases so existing imports don't break
 export const GOLD         = PURPLE;
 export const GOLD_BRIGHT  = "#9B5BFA";
 export const GOLD_DIM     = PURPLE_DIM;
@@ -71,12 +70,12 @@ export const C = {
 export const TOKEN_ECONOMY = {
   tokensPerAd:       25,
   nairaPerTenTokens: 20,
-  tokensToVerify:    500,    // blue verified
-  cardVerifyPrice:   500,    // ₦500 — blue
-  whiteTokenCost:    10000,  // white verified: 10,000 tokens
-  whiteNairaCost:    2500,   // white verified: ₦2,500
-  whiteMinFollowers: 20,     // 20 verified followers needed
-  whiteMinPosts:     50,     // 50 posts needed
+  tokensToVerify:    500,
+  cardVerifyPrice:   500,
+  whiteTokenCost:    10000,
+  whiteNairaCost:    2500,
+  whiteMinFollowers: 20,
+  whiteMinPosts:     50,
 };
 
 // ─── THEMES  ─────────────────────────────────────────────────────────────────
@@ -125,7 +124,7 @@ const FUTA_FACULTIES = ["SESE","SIMME","SLS","SOC","SPS","SAAT","SBMS","SLIT","S
 
 const MOCK_USER = {
   id: "me", name: "Glimacy Dev", handle: "@glimacy.dev", verified: false,
-  verifiedType: null,  // "blue" | "white" | null
+  verifiedType: null,
   bio: "Building the future, one commit at a time 🚀",
   university: "Federal University of Technology, Akure (FUTA)",
   faculty: "SLIT", gender: "Male", tokens: 80,
@@ -283,15 +282,15 @@ export const GlimacyBadge = ({ type = "blue", size = 15 }) => {
 };
 
 // ─── VERIFY MODAL  ────────────────────────────────────────────────────────────
-const VerifyModal = ({ T, tokens, user, onClose, onVerified, onEarnedTokens }) => {
-  const [tab,          setTab]          = useState("blue"); // blue | white
-  const [step,         setStep]         = useState("options"); // options | watchAd | watchingAd | cardPay
+const VerifyModal = React.memo(({ T, tokens, user, onClose, onVerified, onEarnedTokens }) => {
+  const [tab,          setTab]          = useState("blue");
+  const [step,         setStep]         = useState("options");
   const [adCount,      setAdCount]      = useState(0);
   const [watchProgress,setWatchProgress]= useState(0);
   const timerRef = useRef(null);
 
   const userPostCount     = user?.posts || 0;
-  const verifiedFollowers = 0; // in a real app fetch from DB
+  const verifiedFollowers = 0; 
   const canWhite          = verifiedFollowers >= TOKEN_ECONOMY.whiteMinFollowers && userPostCount >= TOKEN_ECONOMY.whiteMinPosts;
   const canWhiteTokens    = tokens >= TOKEN_ECONOMY.whiteTokenCost && canWhite;
   const canBlueTokens     = tokens >= TOKEN_ECONOMY.tokensToVerify;
@@ -326,8 +325,7 @@ const VerifyModal = ({ T, tokens, user, onClose, onVerified, onEarnedTokens }) =
     <div style={baseStyle}>
       <div style={boxStyle}>
         <button onClick={onClose} style={{ position:"absolute", top:14, right:14, background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={18}/></button>
-
-        {/* Tab: Blue / White */}
+        {/* Modal Logic Remains the Same */}
         {step === "options" && (
           <>
             <div style={{ display:"flex", gap:8, marginBottom:18 }}>
@@ -406,7 +404,6 @@ const VerifyModal = ({ T, tokens, user, onClose, onVerified, onEarnedTokens }) =
           </>
         )}
 
-        {/* WATCH AD */}
         {(step === "watchAd" || step === "watchingAd") && (
           <>
             <div style={{ fontSize:44, marginBottom:10 }}>📺</div>
@@ -436,7 +433,6 @@ const VerifyModal = ({ T, tokens, user, onClose, onVerified, onEarnedTokens }) =
           </>
         )}
 
-        {/* CARD PAY (blue ₦500 or white ₦2500) */}
         {(step === "cardPay" || step === "cardPayWhite") && (() => {
           const isWhitePay = step === "cardPayWhite";
           const price = isWhitePay ? TOKEN_ECONOMY.whiteNairaCost : TOKEN_ECONOMY.cardVerifyPrice;
@@ -470,10 +466,10 @@ const VerifyModal = ({ T, tokens, user, onClose, onVerified, onEarnedTokens }) =
       </div>
     </div>
   );
-};
+});
 
 // ─── HOME ACTION BANNER ───────────────────────────────────────────────────────
-export const ActionBannerBtns = ({ T, user, tokens, onVerifyClick, onEarnClick }) => (
+export const ActionBannerBtns = React.memo(({ T, user, tokens, onVerifyClick, onEarnClick }) => (
   <div style={{ display:"flex", gap:8 }}>
     {!user?.verified && (
       <button onClick={onVerifyClick} style={{
@@ -492,10 +488,10 @@ export const ActionBannerBtns = ({ T, user, tokens, onVerifyClick, onEarnClick }
       <Coins size={15}/> 🪙 {tokens} Tokens
     </button>
   </div>
-);
+));
 
 // ─── SEASON REWARDS PANEL  ────────────────────────────────────────────────────
-const SeasonRewards = ({ T }) => {
+const SeasonRewards = React.memo(({ T }) => {
   const prizes = [
     { place:"🥇 1st Place", prize:"₦50,000 Cash + Gold Badge", color:"#FFD700" },
     { place:"🥈 2nd Place", prize:"₦25,000 Cash + Silver Badge", color:"#C0C0C0" },
@@ -527,10 +523,10 @@ const SeasonRewards = ({ T }) => {
       </div>
     </div>
   );
-};
+});
 
 // ─── AD BOOST VIEW ────────────────────────────────────────────────────────────
-const AdBoostView = ({ T, user, tokens, onSpendTokens, onEarnClick }) => {
+const AdBoostView = React.memo(({ T, user, tokens, onSpendTokens, onEarnClick }) => {
   const [selectedTier,  setSelectedTier]  = useState(null);
   const [gender,        setGender]        = useState("Both");
   const [payMethod,     setPayMethod]     = useState("card");
@@ -694,10 +690,10 @@ const AdBoostView = ({ T, user, tokens, onSpendTokens, onEarnClick }) => {
       </div>
     </div>
   );
-};
+});
 
 // ─── STORY RING & BAR ─────────────────────────────────────────────────────────
-const StoryRing = ({ T, entry, seenIds, onAvatarClick, onAddClick }) => {
+const StoryRing = React.memo(({ T, entry, seenIds, onAvatarClick, onAddClick, onViewProfile }) => {
   const hasItems = (entry.items||[]).length > 0;
   const isActive = hasItems && (entry.items||[]).some(it => !seenIds.has(it.id));
   const ringGrad = entry.isMe
@@ -705,8 +701,8 @@ const StoryRing = ({ T, entry, seenIds, onAvatarClick, onAddClick }) => {
     : (isActive ? PURPLE : T.divider);
   return (
     <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:5, flexShrink:0, width:64 }}>
-      <div onClick={() => { if(hasItems)onAvatarClick(); else if(entry.isMe)onAddClick(); }}
-        style={{ position:"relative", width:60, height:60, borderRadius:"50%", padding:2.5, background:ringGrad, cursor:(hasItems||entry.isMe)?"pointer":"default", animation:isActive?"storyPulse 2.4s ease-in-out infinite":"none" }}>
+      <div onClick={() => { if(hasItems)onAvatarClick(); else if(entry.isMe)onAddClick(); else if(onViewProfile)onViewProfile(entry.userId); }}
+        style={{ position:"relative", width:60, height:60, borderRadius:"50%", padding:2.5, background:ringGrad, cursor:(hasItems||entry.isMe||!entry.isMe)?"pointer":"default", animation:isActive?"storyPulse 2.4s ease-in-out infinite":"none" }}>
         <div style={{ width:"100%", height:"100%", borderRadius:"50%", background:T.bg, padding:2 }}>
           <div style={{ width:"100%", height:"100%", borderRadius:"50%", overflow:"hidden", background:entry.avatarUrl?"transparent":`linear-gradient(135deg,${PURPLE}99,${PURPLE})`, display:"flex", alignItems:"center", justifyContent:"center", color:WHITE, fontWeight:700, fontSize:18 }}>
             {entry.avatarUrl ? <img src={entry.avatarUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }}/> : (entry.seed||entry.name||"U")[0]?.toUpperCase()}
@@ -728,50 +724,58 @@ const StoryRing = ({ T, entry, seenIds, onAvatarClick, onAddClick }) => {
       </span>
     </div>
   );
-};
-const StoryBar = ({ T, statusFeed, seenIds, onAvatarClick, onAddClick }) => (
+});
+
+const StoryBar = React.memo(({ T, statusFeed, seenIds, onAvatarClick, onAddClick, onViewProfile }) => (
   <div style={{ display:"flex", gap:14, overflowX:"auto", padding:"2px 2px 10px" }}>
     {statusFeed.map((entry, idx) => (
-      <StoryRing key={entry.userId} T={T} entry={entry} seenIds={seenIds} onAvatarClick={() => onAvatarClick(idx)} onAddClick={onAddClick}/>
+      <StoryRing key={entry.userId} T={T} entry={entry} seenIds={seenIds} onAvatarClick={() => onAvatarClick(idx)} onAddClick={onAddClick} onViewProfile={onViewProfile}/>
     ))}
   </div>
-);
+));
 
 // ─── STORY VIEWER ────────────────────────────────────────────────────────────
 const STORY_ITEM_MS = 5000;
-const StoryViewerModal = ({ T, statusFeed, startIndex, seenIds, setSeenIds, onDeleteMyItem, onClose, statusLikes, setStatusLikes, statusViews, setStatusViews, currentUser:viewer, onPoints }) => {
+const StoryViewerModal = React.memo(({ T, statusFeed, startIndex, seenIds, setSeenIds, onDeleteMyItem, onClose, statusLikes, setStatusLikes, statusViews, setStatusViews, currentUser:viewer, onPoints, onViewProfile }) => {
   const [userIdx,setUserIdx]=useState(startIndex);
   const [itemIdx,setItemIdx]=useState(0);
   const [paused,setPaused]=useState(false);
   const [progress,setProgress]=useState(0);
   const [showInteractions,setShowInteractions]=useState(false);
   const startRef=useRef(null);
+  
   const currentUser=statusFeed[userIdx];
   const currentItem=currentUser?.items?.[itemIdx];
   const viewerName=viewer?.name||"You";
   const storyLikers=(statusLikes&&currentItem)?statusLikes[currentItem.id]||[]:[];
   const storyViewers=(statusViews&&currentItem)?statusViews[currentItem.id]||[]:[];
   const iLikedThis=storyLikers.includes(viewerName);
-  const toggleStoryLike=()=>{
+  
+  const toggleStoryLike=useCallback(()=>{
     if(!currentItem||!setStatusLikes)return;
     setStatusLikes(prev=>{const cur=prev[currentItem.id]||[];const next=cur.includes(viewerName)?cur.filter(n=>n!==viewerName):[...cur,viewerName];return{...prev,[currentItem.id]:next};});
     if(!iLikedThis&&onPoints)onPoints("LIKE_STATUS");
-  };
+  }, [currentItem, iLikedThis, onPoints, setStatusLikes, viewerName]);
+  
   useEffect(()=>{
     setProgress(0);startRef.current=null;if(!currentItem)return;
     setSeenIds(p=>new Set([...p,currentItem.id]));
     if(setStatusViews&&viewerName){setStatusViews(prev=>{const cur=prev[currentItem.id]||[];if(cur.includes(viewerName))return prev;if(onPoints)onPoints("VIEW_STATUS");return{...prev,[currentItem.id]:[...cur,viewerName]};});}
-  },[userIdx,itemIdx]);
+  },[userIdx,itemIdx, currentItem, setSeenIds, setStatusViews, viewerName, onPoints]);
+  
   useEffect(()=>{
     if(!currentItem||paused)return;
     let handle;
     const raf=()=>{const now=Date.now();if(!startRef.current)startRef.current=now;const elapsed=now-startRef.current;const pct=Math.min(100,(elapsed/STORY_ITEM_MS)*100);setProgress(pct);if(pct<100)handle=requestAnimationFrame(raf);else advance();};
     handle=requestAnimationFrame(raf);return()=>cancelAnimationFrame(handle);
   },[currentItem,paused,userIdx,itemIdx]);
-  const advance=()=>{if(itemIdx<(currentUser?.items?.length||0)-1){setItemIdx(i=>i+1);}else if(userIdx<statusFeed.length-1){setUserIdx(i=>i+1);setItemIdx(0);}else onClose();};
-  const retreat=()=>{if(itemIdx>0)setItemIdx(i=>i-1);else if(userIdx>0){setUserIdx(i=>i-1);setItemIdx(0);}};
+  
+  const advance=useCallback(()=>{if(itemIdx<(currentUser?.items?.length||0)-1){setItemIdx(i=>i+1);}else if(userIdx<statusFeed.length-1){setUserIdx(i=>i+1);setItemIdx(0);}else onClose();}, [itemIdx, userIdx, currentUser, statusFeed, onClose]);
+  const retreat=useCallback(()=>{if(itemIdx>0)setItemIdx(i=>i-1);else if(userIdx>0){setUserIdx(i=>i-1);setItemIdx(0);}}, [itemIdx, userIdx]);
+  
   if(!currentUser||!currentItem)return null;
   const bg=currentItem.type==="photo"?"#000":currentItem.bg||STATUS_BG_PRESETS[0];
+  
   return(
     <div style={{position:"fixed",inset:0,zIndex:300,background:"#000",display:"flex",flexDirection:"column"}}>
       <div style={{position:"absolute",top:0,left:0,right:0,zIndex:10,padding:"12px 12px 8px",display:"flex",gap:4}}>
@@ -782,7 +786,7 @@ const StoryViewerModal = ({ T, statusFeed, startIndex, seenIds, setSeenIds, onDe
         ))}
       </div>
       <div style={{position:"absolute",top:28,left:0,right:0,zIndex:10,display:"flex",alignItems:"center",padding:"0 14px",gap:10}}>
-        <div style={{width:34,height:34,borderRadius:"50%",overflow:"hidden",background:`linear-gradient(135deg,${PURPLE}99,${PURPLE})`,display:"flex",alignItems:"center",justifyContent:"center",color:WHITE,fontWeight:700}}>
+        <div onClick={() => { onClose(); onViewProfile(currentUser.userId); }} style={{width:34,height:34,borderRadius:"50%",overflow:"hidden",background:`linear-gradient(135deg,${PURPLE}99,${PURPLE})`,display:"flex",alignItems:"center",justifyContent:"center",color:WHITE,fontWeight:700,cursor:"pointer"}}>
           {currentUser.avatarUrl?<img src={currentUser.avatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(currentUser.seed||currentUser.name||"U")[0]}
         </div>
         <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:"#fff"}}>{currentUser.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.7)"}}>{timeAgo(currentItem.createdAt)}</div></div>
@@ -818,18 +822,20 @@ const StoryViewerModal = ({ T, statusFeed, startIndex, seenIds, setSeenIds, onDe
       </div>
     </div>
   );
-};
+});
 
 // ─── STATUS COMPOSER ─────────────────────────────────────────────────────────
-const StatusComposerModal = ({ T, onClose, onSubmit }) => {
+const StatusComposerModal = React.memo(({ T, onClose, onSubmit }) => {
   const [mode,setMode]=useState("text");
   const [text,setText]=useState("");
   const [bgIndex,setBgIndex]=useState(0);
   const [imageData,setImageData]=useState(null);
   const fileInputRef=useRef(null);
-  const handleFile=e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=ev=>setImageData(ev.target?.result||null);r.readAsDataURL(f);};
+  
+  const handleFile=useCallback(e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=ev=>setImageData(ev.target?.result||null);r.readAsDataURL(f);}, []);
   const canSubmit=mode==="text"?text.trim().length>0:!!imageData;
-  const submit=()=>{if(!canSubmit)return;onSubmit(mode==="text"?{type:"text",content:text,bg:STATUS_BG_PRESETS[bgIndex]}:{type:"photo",imageData,caption:text});};
+  const submit=useCallback(()=>{if(!canSubmit)return;onSubmit(mode==="text"?{type:"text",content:text,bg:STATUS_BG_PRESETS[bgIndex]}:{type:"photo",imageData,caption:text});}, [canSubmit, mode, onSubmit, text, bgIndex, imageData]);
+  
   return(
     <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.7)",backdropFilter:"blur(6px)",display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{background:mode==="text"?STATUS_BG_PRESETS[bgIndex]:T.isDark?"#0A0012":"#fff",borderRadius:"20px 20px 0 0",padding:18,minHeight:360,display:"flex",flexDirection:"column",animation:"modalSlideUp 0.3s ease"}}>
@@ -871,35 +877,37 @@ const StatusComposerModal = ({ T, onClose, onSubmit }) => {
       </div>
     </div>
   );
-};
+});
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
-const Toast = ({ T, message }) => {
+const Toast = React.memo(({ T, message }) => {
   if (!message) return null;
   return (
     <div style={{ position:"fixed", bottom:94, left:"50%", zIndex:400, transform:"translateX(-50%)", background:T.isDark?"rgba(0,0,12,0.96)":"rgba(10,0,20,0.92)", color:PURPLE, padding:"10px 18px", borderRadius:24, fontSize:13, fontWeight:600, boxShadow:`0 8px 24px ${PURPLE_GLOW}`, whiteSpace:"nowrap", animation:"toastPop 2.4s ease forwards" }}>
       {message}
     </div>
   );
-};
+});
 
 // ─── COMMENT SECTION ─────────────────────────────────────────────────────────
-const CommentSection = ({ T, post, allPosts, setAllPosts, onViewProfile, onPoints }) => {
+const CommentSection = React.memo(({ T, post, setAllPosts, onViewProfile, onPoints }) => {
   const [commentText, setCommentText] = useState("");
-  const [replyTo,     setReplyTo]     = useState(null);
-  const submitComment = () => {
+  const submitComment = useCallback(() => {
     if (!commentText.trim()) return;
-    const newComment = { id:uid("c"), author:"You", text:commentText.trim(), time:"Just now", likes:0, liked:false };
+    const newComment = { id:uid("c"), author:"You", text:commentText.trim(), time:"Just now", likes:0, liked:false, authorId:"me" };
     setAllPosts(prev => prev.map(p => p.id===post.id ? {...p,comments:[...(p.comments||[]),newComment]} : p));
     if (onPoints) onPoints("COMMENT");
-    setCommentText(""); setReplyTo(null);
-  };
+    setCommentText("");
+  }, [commentText, onPoints, post.id, setAllPosts]);
+  
   return (
     <div className="fade-up" style={{ marginTop:10, borderTop:`1px solid ${T.divider}`, paddingTop:10 }}>
       {(post.comments||[]).length === 0 && <p style={{ margin:"0 0 10px", fontSize:12, color:T.muted, textAlign:"center" }}>No comments yet — be first!</p>}
       {(post.comments||[]).map(c => (
         <div key={c.id} style={{ display:"flex", gap:8, marginBottom:10 }}>
-          <div style={{ width:28, height:28, borderRadius:"50%", background:PURPLE_DIM, border:`1px solid ${PURPLE_BD}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, color:PURPLE, fontWeight:700, flexShrink:0 }}>
+          <div 
+            onClick={() => c.authorId && onViewProfile(c.authorId)}
+            style={{ width:28, height:28, borderRadius:"50%", background:PURPLE_DIM, border:`1px solid ${PURPLE_BD}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, color:PURPLE, fontWeight:700, flexShrink:0, cursor:c.authorId?"pointer":"default" }}>
             {(c.author||"Y")[0].toUpperCase()}
           </div>
           <div style={{ flex:1, background:T.inputBg, borderRadius:12, padding:"8px 12px", border:`1px solid ${T.inputBorder}` }}>
@@ -922,10 +930,10 @@ const CommentSection = ({ T, post, allPosts, setAllPosts, onViewProfile, onPoint
       </div>
     </div>
   );
-};
+});
 
 // ─── POST CARD ────────────────────────────────────────────────────────────────
-const PostCard = ({ T, post, allPosts, setAllPosts, onViewProfile, onPoints, currentUser, index }) => {
+const PostCard = React.memo(({ T, post, setAllPosts, onViewProfile, onPoints, currentUser, index }) => {
   const [showComments, setShowComments] = useState(false);
   const [likeAnim,     setLikeAnim]     = useState(false);
   const [saveAnim,     setSaveAnim]     = useState(false);
@@ -933,7 +941,7 @@ const PostCard = ({ T, post, allPosts, setAllPosts, onViewProfile, onPoints, cur
   const [likersOpen,   setLikersOpen]   = useState(false);
   const menuRef = useRef(null);
 
-  const toggleLike = () => {
+  const toggleLike = useCallback(() => {
     setLikeAnim(true); setTimeout(() => setLikeAnim(false), 400);
     const userName = currentUser?.name || "You";
     setAllPosts(prev => prev.map(p => {
@@ -944,10 +952,11 @@ const PostCard = ({ T, post, allPosts, setAllPosts, onViewProfile, onPoints, cur
       return { ...p, liked:!wasLiked, likes:wasLiked?p.likes-1:p.likes+1, likedBy:newLb };
     }));
     if (!post.liked && onPoints) onPoints("LIKE_POST");
-  };
-  const toggleSave   = () => { setSaveAnim(true); setTimeout(()=>setSaveAnim(false),400); setAllPosts(prev=>prev.map(p=>p.id===post.id?{...p,saved:!p.saved,saves:p.saved?p.saves-1:p.saves+1}:p)); };
-  const toggleRepost = () => { setAllPosts(prev=>prev.map(p=>p.id===post.id?{...p,reposted:!p.reposted,reposts:p.reposted?p.reposts-1:p.reposts+1}:p)); if(!post.reposted&&onPoints)onPoints("REPOST"); };
-  const deletePost   = () => setAllPosts(prev => prev.filter(p => p.id !== post.id));
+  }, [currentUser?.name, onPoints, post.id, post.liked, setAllPosts]);
+  
+  const toggleSave = useCallback(() => { setSaveAnim(true); setTimeout(()=>setSaveAnim(false),400); setAllPosts(prev=>prev.map(p=>p.id===post.id?{...p,saved:!p.saved,saves:p.saved?p.saves-1:p.saves+1}:p)); }, [post.id, setAllPosts]);
+  const toggleRepost = useCallback(() => { setAllPosts(prev=>prev.map(p=>p.id===post.id?{...p,reposted:!p.reposted,reposts:p.reposted?p.reposts-1:p.reposts+1}:p)); if(!post.reposted&&onPoints)onPoints("REPOST"); }, [onPoints, post.id, post.reposted, setAllPosts]);
+  const deletePost = useCallback(() => setAllPosts(prev => prev.filter(p => p.id !== post.id)), [post.id, setAllPosts]);
 
   return (
     <div style={{ ...glass(T, { borderRadius:14 }), overflow:"hidden", animation:"cardIn 0.4s ease both", animationDelay:`${Math.min(index*0.05,0.3)}s` }}>
@@ -1009,21 +1018,21 @@ const PostCard = ({ T, post, allPosts, setAllPosts, onViewProfile, onPoints, cur
           <ActionBtn onClick={toggleSave}   Icon={Bookmark}       label={post.saves||0}           active={post.saved}    activeColor={PURPLE} fillWhenActive anim={saveAnim?"bookmarkPop 0.4s ease":"none"} T={T}/>
           <ActionBtn onClick={() => {}} Icon={Share2} label="Share" T={T}/>
         </div>
-        {showComments && <CommentSection T={T} post={post} allPosts={allPosts} setAllPosts={setAllPosts} onViewProfile={onViewProfile} onPoints={onPoints}/>}
+        {showComments && <CommentSection T={T} post={post} setAllPosts={setAllPosts} onViewProfile={onViewProfile} onPoints={onPoints}/>}
       </div>
     </div>
   );
-};
+});
 
 // ─── VIDEO POST CARD ──────────────────────────────────────────────────────────
-const VideoPostCard = ({ T, post, allPosts, setAllPosts, onViewProfile, onPoints, currentUser, index }) => {
+const VideoPostCard = React.memo(({ T, post, setAllPosts, onViewProfile, onPoints, currentUser, index }) => {
   const [showComments, setShowComments] = useState(false);
   const [likeAnim,     setLikeAnim]     = useState(false);
   const [saveAnim,     setSaveAnim]     = useState(false);
   const [postMenuOpen, setPostMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  const toggleLike = () => {
+  const toggleLike = useCallback(() => {
     setLikeAnim(true); setTimeout(()=>setLikeAnim(false),400);
     const userName = currentUser?.name || "You";
     setAllPosts(prev => prev.map(p => {
@@ -1034,10 +1043,11 @@ const VideoPostCard = ({ T, post, allPosts, setAllPosts, onViewProfile, onPoints
       return {...p,liked:!wasLiked,likes:wasLiked?p.likes-1:p.likes+1,likedBy:newLb};
     }));
     if (!post.liked && onPoints) onPoints("LIKE_POST");
-  };
-  const toggleSave   = () => { setSaveAnim(true); setTimeout(()=>setSaveAnim(false),400); setAllPosts(prev=>prev.map(p=>p.id===post.id?{...p,saved:!p.saved,saves:p.saved?p.saves-1:p.saves+1}:p)); };
-  const toggleRepost = () => { setAllPosts(prev=>prev.map(p=>p.id===post.id?{...p,reposted:!p.reposted,reposts:p.reposted?p.reposts-1:p.reposts+1}:p)); if(!post.reposted&&onPoints)onPoints("REPOST"); };
-  const deletePost   = () => setAllPosts(prev=>prev.filter(p=>p.id!==post.id));
+  }, [currentUser?.name, onPoints, post.id, post.liked, setAllPosts]);
+  
+  const toggleSave = useCallback(() => { setSaveAnim(true); setTimeout(()=>setSaveAnim(false),400); setAllPosts(prev=>prev.map(p=>p.id===post.id?{...p,saved:!p.saved,saves:p.saved?p.saves-1:p.saves+1}:p)); }, [post.id, setAllPosts]);
+  const toggleRepost = useCallback(() => { setAllPosts(prev=>prev.map(p=>p.id===post.id?{...p,reposted:!p.reposted,reposts:p.reposted?p.reposts-1:p.reposts+1}:p)); if(!post.reposted&&onPoints)onPoints("REPOST"); }, [onPoints, post.id, post.reposted, setAllPosts]);
+  const deletePost = useCallback(() => setAllPosts(prev=>prev.filter(p=>p.id!==post.id)), [post.id, setAllPosts]);
 
   return (
     <div style={{ ...glass(T, { borderRadius:14 }), overflow:"hidden", animation:"cardIn 0.4s ease both", animationDelay:`${Math.min(index*0.05,0.3)}s` }}>
@@ -1081,14 +1091,14 @@ const VideoPostCard = ({ T, post, allPosts, setAllPosts, onViewProfile, onPoints
           <ActionBtn onClick={toggleSave}   Icon={Bookmark}       label={post.saves||0}           active={post.saved}    activeColor={PURPLE} fillWhenActive anim={saveAnim?"bookmarkPop 0.4s ease":"none"} T={T}/>
           <ActionBtn onClick={() => {}} Icon={Share2} label="Share" T={T}/>
         </div>
-        {showComments && <CommentSection T={T} post={post} allPosts={allPosts} setAllPosts={setAllPosts} onViewProfile={onViewProfile} onPoints={onPoints}/>}
+        {showComments && <CommentSection T={T} post={post} setAllPosts={setAllPosts} onViewProfile={onViewProfile} onPoints={onPoints}/>}
       </div>
     </div>
   );
-};
+});
 
 // ─── SETTINGS PANEL ──────────────────────────────────────────────────────────
-const SettingsPanel = ({ T, open, onClose, themeMode, setThemeMode, onSignOut, onFeedback }) => {
+const SettingsPanel = React.memo(({ T, open, onClose, themeMode, setThemeMode, onSignOut, onFeedback }) => {
   const [section, setSection] = useState(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(false);
@@ -1106,7 +1116,6 @@ const SettingsPanel = ({ T, open, onClose, themeMode, setThemeMode, onSignOut, o
   });
   const sendFeedback = () => {
     if (!feedbackText.trim()) return;
-    // In production: send to Supabase or email
     const subject = encodeURIComponent("Glimacy App Feedback");
     const body    = encodeURIComponent(feedbackText.trim());
     window.open(`mailto:therealglimmar@gmail.com?subject=${subject}&body=${body}`, "_blank");
@@ -1182,38 +1191,31 @@ const SettingsPanel = ({ T, open, onClose, themeMode, setThemeMode, onSignOut, o
       </div>
     </div>
   );
-};
+});
 
 // ─── INLINE HEADER (4 icons: Search · Feedback · Settings · Messages) ─────────
-const AppHeader = ({ T, user, onAvatarClick, onSearchClick, onSettingsClick, onMessagesClick, onFeedbackClick, unreadMessages, children }) => (
+const AppHeader = React.memo(({ T, user, onAvatarClick, onSearchClick, onSettingsClick, onMessagesClick, onFeedbackClick, unreadMessages, children }) => (
   <div style={{
-    position:"sticky", top:0, zIndex:50,
     display:"flex", alignItems:"center", gap:8, padding:"12px 14px 10px",
     background:T.isDark?"rgba(0,0,12,0.94)":"rgba(240,238,255,0.94)",
     backdropFilter:"blur(14px)", borderBottom:`1px solid ${T.divider}`,
   }}>
-    {/* Avatar / Brand */}
     <div onClick={onAvatarClick} style={{ cursor:"pointer", flexShrink:0 }}>
       {children || <div style={{ width:32, height:32, borderRadius:"50%", background:PURPLE, display:"flex", alignItems:"center", justifyContent:"center", color:WHITE, fontWeight:800, fontSize:13 }}>{(user?.name||"G")[0]}</div>}
     </div>
     <div style={{ flex:1 }}>
       <div style={{ fontWeight:800, fontSize:17, color:T.text, letterSpacing:-0.5 }}>Glimacy</div>
     </div>
-    {/* Right icons */}
     <div style={{ display:"flex", gap:4, alignItems:"center" }}>
-      {/* Search */}
       <button onClick={onSearchClick} style={{ width:36, height:36, borderRadius:10, background:"transparent", border:"none", color:T.muted, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
         <Search size={19}/>
       </button>
-      {/* Feedback */}
       <button onClick={onFeedbackClick} style={{ width:36, height:36, borderRadius:10, background:"transparent", border:"none", color:T.muted, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
         <MessageSquare size={19}/>
       </button>
-      {/* Settings */}
       <button onClick={onSettingsClick} style={{ width:36, height:36, borderRadius:10, background:"transparent", border:"none", color:T.muted, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
         <Settings size={19}/>
       </button>
-      {/* Messages — LAST */}
       <button onClick={onMessagesClick} style={{ position:"relative", width:36, height:36, borderRadius:10, background:PURPLE_DIM, border:`1px solid ${PURPLE_BD}`, color:PURPLE, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
         <Send size={18}/>
         {unreadMessages > 0 && (
@@ -1224,7 +1226,7 @@ const AppHeader = ({ T, user, onAvatarClick, onSearchClick, onSettingsClick, onM
       </button>
     </div>
   </div>
-);
+));
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App() {
@@ -1277,10 +1279,15 @@ export default function App() {
   const [searchQuery,         setSearchQuery]        = useState("");
   const [searchSubTab,        setSearchSubTab]       = useState("posts");
   const [imagePreview,        setImagePreview]       = useState(null);
+  
   const [headerVisible,       setHeaderVisible]      = useState(true);
-  const lastScrollY       = useRef(0);
-  const scrollTimer       = useRef(null);
-  const scrollContainerRef = useRef(null);
+  const headerVisibleRef      = useRef(true);
+  const setHeaderVis          = useCallback((val) => { if(headerVisibleRef.current !== val){ headerVisibleRef.current = val; setHeaderVisible(val); } }, []);
+  
+  const lastScrollY           = useRef(0);
+  const scrollTimer           = useRef(null);
+  const scrollContainerRef    = useRef(null);
+  
   const [myStatusItems,       setMyStatusItems]      = useState(() => loadLS(LS_KEYS.myStatuses, []));
   const [seenStatusItemIds,   setSeenStatusItemIds]  = useState(() => new Set(loadLS(LS_KEYS.seenStatusItems, [])));
   const [otherStatuses,       setOtherStatuses]      = useState([]);
@@ -1289,25 +1296,27 @@ export default function App() {
   const [savedArchive,        setSavedArchive]       = useState(() => loadLS(LS_KEYS.savedArchive, []));
   const [toast,               setToast]              = useState(null);
   const toastTimer = useRef(null);
-  const showToast = (message) => { setToast(message); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 2400); };
+  const showToast = useCallback((message) => { setToast(message); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 2400); }, []);
   const [pullDistance, setPullDistance] = useState(0);
   const [refreshing,   setRefreshing]   = useState(false);
   const pullStartY = useRef(null);
 
-  // Scroll handler — hide header + bottom nav on scroll down
-  const handleMainScroll = (e) => {
+  // ── Scroll handler: throttle UI lag ──
+  const handleMainScroll = useCallback((e) => {
     if (activeTab !== "home") return;
     const cur  = e.currentTarget.scrollTop;
     const diff = cur - lastScrollY.current;
-    if (diff > 8)  setHeaderVisible(false);
-    if (diff < -8) setHeaderVisible(true);
+    
+    if (diff > 12 && headerVisibleRef.current) setHeaderVis(false);
+    else if (diff < -12 && !headerVisibleRef.current) setHeaderVis(true);
+    
     lastScrollY.current = cur;
     clearTimeout(scrollTimer.current);
-    scrollTimer.current = setTimeout(() => setHeaderVisible(true), 1200);
-  };
+    scrollTimer.current = setTimeout(() => setHeaderVis(true), 1500);
+  }, [activeTab, setHeaderVis]);
 
-  const handleUpdateAvatar = (url) => setUser(prev => ({ ...prev, avatarUrl:url }));
-  const handleUpdateCover  = (url) => setUser(prev => ({ ...prev, coverUrl:url }));
+  const handleUpdateAvatar = useCallback((url) => setUser(prev => ({ ...prev, avatarUrl:url })), []);
+  const handleUpdateCover  = useCallback((url) => setUser(prev => ({ ...prev, coverUrl:url })), []);
 
   // ── Supabase: fetch user ───────────────────────────────────────────────────
   const fetchUserData = async (userId) => {
@@ -1365,11 +1374,11 @@ export default function App() {
   useEffect(() => { saveLS(LS_KEYS.statusLikes, statusLikes); },          [statusLikes]);
   useEffect(() => { saveLS(LS_KEYS.statusViews, statusViews); },          [statusViews]);
 
-  // Auto-sync saved archive when posts change
-  const isAuthorVerified = (post) => {
+  const isAuthorVerified = useCallback((post) => {
     if (post.authorId === user?.id || post.authorId === "me") return !!user?.verified;
     return !!appProfiles.find(p => p.id === post.authorId)?.verified;
-  };
+  }, [user, appProfiles]);
+
   useEffect(() => {
     const currentlySaved = [...feedPosts,...myVideoPosts].filter(p=>p.saved);
     const idsInScope = new Set([...feedPosts,...myVideoPosts].map(p=>p.id));
@@ -1379,7 +1388,7 @@ export default function App() {
       const next = []; map.forEach((entry,id)=>{ const inScope=idsInScope.has(id); const stillSaved=currentlySaved.some(p=>p.id===id); if(!inScope||stillSaved)next.push(entry); });
       return next.sort((a,b)=>(b.savedAt||0)-(a.savedAt||0));
     });
-  }, [feedPosts,myVideoPosts]);
+  }, [feedPosts, myVideoPosts, isAuthorVerified]);
 
   useEffect(() => {
     if (otherStatuses.length > 0) return;
@@ -1391,12 +1400,12 @@ export default function App() {
       items: i%3===2 ? [] : [{ id:`seed_st_${p.id}`, type:"text", content:STATUS_SAMPLE_LINES[i%STATUS_SAMPLE_LINES.length], bg:STATUS_BG_PRESETS[i%STATUS_BG_PRESETS.length], createdAt:now-(i+1)*1000*60*35 }]
     }));
     setOtherStatuses(seeded);
-  }, [appProfiles]);
+  }, [appProfiles, otherStatuses.length]);
 
-  useEffect(() => { setHeaderVisible(true); setPullDistance(0); pullStartY.current=null; }, [activeTab]);
+  useEffect(() => { setHeaderVis(true); setPullDistance(0); pullStartY.current=null; }, [activeTab, setHeaderVis]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
-  const handleToggleFollow = async (targetId) => {
+  const handleToggleFollow = useCallback(async (targetId) => {
     if (!user?.id || user.id === "me") return;
     const isFollowing = followingIds.has(targetId);
     setFollowingIds(prev => { const next=new Set(prev); isFollowing?next.delete(targetId):next.add(targetId); return next; });
@@ -1404,22 +1413,16 @@ export default function App() {
     setUser(prev => ({ ...prev, following_count:(prev.following_count||0)+(isFollowing?-1:1) }));
     if (isFollowing) await supabase.from("follows").delete().match({ follower_id:user.id, following_id:targetId });
     else              await supabase.from("follows").insert({ follower_id:user.id, following_id:targetId });
-  };
+  }, [followingIds, user?.id]);
 
-  const handleOpenEditModal = () => {
-    setEditName(user.name);
-    setEditHandle(user.handle);
-    setEditBio(user.bio);
-    setEditUni(user.university);
-    setEditFaculty(user.faculty || "");
-    setEditRelationship(user.relationshipStatus || "Single");
-    setEditGender(user.gender || "Male");
-    setEditPhone(user.phone || "");
+  const handleOpenEditModal = useCallback(() => {
+    setEditName(user.name); setEditHandle(user.handle); setEditBio(user.bio); setEditUni(user.university);
+    setEditFaculty(user.faculty || ""); setEditRelationship(user.relationshipStatus || "Single");
+    setEditGender(user.gender || "Male"); setEditPhone(user.phone || "");
     setEditHobby(user.hobby ? user.hobby.replace(/^I love\s+/i, "") : "");
     setIsEditModalOpen(true);
-  };
+  }, [user]);
 
-  // ── handleSaveProfile — full Supabase upsert ─────────────────────────────
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     let fmtHandle = editHandle.trim();
@@ -1463,25 +1466,25 @@ export default function App() {
     showToast("Profile updated ✨");
   };
 
-  const handleViewProfile   = (profileId) => { setViewingProfileId(profileId); setActiveTab("profile"); };
-  const handleExitProfile   = () => { setViewingProfileId(null); setActiveTab("home"); };
-  const handleImagePreview  = ({ type, user:previewUser }) => setImagePreview({ type, user:previewUser });
+  const handleViewProfile   = useCallback((profileId) => { setViewingProfileId(profileId); setActiveTab("profile"); }, []);
+  const handleExitProfile   = useCallback(() => { setViewingProfileId(null); setActiveTab("home"); }, []);
+  const handleImagePreview  = useCallback(({ type, user:previewUser }) => setImagePreview({ type, user:previewUser }), []);
 
-  const handleVerified = (method) => {
+  const handleVerified = useCallback((method) => {
     const isWhite = method.startsWith("white");
     if (method === "blue_tokens")  setTokens(prev => prev - TOKEN_ECONOMY.tokensToVerify);
     if (method === "white_tokens") setTokens(prev => prev - TOKEN_ECONOMY.whiteTokenCost);
     setUser(prev => ({ ...prev, verified:true, verifiedType:isWhite?"white":"blue" }));
     showToast(isWhite ? "⚪ White Verified — Campus Elite!" : "🔵 Blue Verified!");
-  };
+  }, [showToast]);
 
-  const handleEarnedTokens = (amount) => {
+  const handleEarnedTokens = useCallback((amount) => {
     setTokens(prev => prev + amount);
     setUser(prev => ({ ...prev, tokens:(prev.tokens||0)+amount }));
     showToast(`+${amount} tokens earned 🪙`);
-  };
+  }, [showToast]);
 
-  const addPoints = (action) => {
+  const addPoints = useCallback((action) => {
     const pts = POINT_ACTIONS[action] || 0;
     if (!pts) return;
     setUserScore(prev => {
@@ -1490,74 +1493,82 @@ export default function App() {
       return next;
     });
     setUser(prev => ({ ...prev, score:(prev.score||0)+pts }));
-  };
+  }, [showToast]);
 
-  const handleSpendTokens = (amount) => {
+  const handleSpendTokens = useCallback((amount) => {
     if (amount < 0) handleEarnedTokens(-amount);
     else { setTokens(prev => Math.max(0,prev-amount)); setUser(prev => ({ ...prev, tokens:Math.max(0,(prev.tokens||0)-amount) })); }
-  };
+  }, [handleEarnedTokens]);
 
-  const handleUnsaveArchived = (postId) => {
+  const handleUnsaveArchived = useCallback((postId) => {
     setSavedArchive(prev => prev.filter(p => p.id !== postId));
     setFeedPosts(prev => prev.map(p => p.id===postId?{...p,saved:false,saves:Math.max(0,(p.saves||0)-1)}:p));
     setMyVideoPosts(prev => prev.map(p => p.id===postId?{...p,saved:false,saves:Math.max(0,(p.saves||0)-1)}:p));
-  };
+  }, []);
 
-  const handleBackupToGmail = (postsToBackup) => {
+  const handleBackupToGmail = useCallback((postsToBackup) => {
     if (!postsToBackup || postsToBackup.length === 0) { showToast("No saved posts to back up"); return; }
     const lines = postsToBackup.map((p,i) => `${i+1}. ${p.author||"Unknown"} (${p.authorVerifiedAtSave?"Verified":"Unverified"})\n${(p.content||p.caption||"").slice(0,300)}\n${(p.likes||0)} likes\n`).join("\n");
     const subject = encodeURIComponent("Glimacy — Saved Posts Backup");
     const body    = encodeURIComponent(`Saved posts:\n\n${lines}\nExported ${new Date().toLocaleString()}`);
     window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`, "_blank", "noopener,noreferrer");
     showToast("Opening Gmail…");
-  };
+  }, [showToast]);
 
-  const openStoryViewer  = (idx) => { if (idx >= 0) setStoryViewerIndex(idx); };
-  const closeStoryViewer = () => setStoryViewerIndex(null);
+  const openStoryViewer  = useCallback((idx) => { if (idx >= 0) setStoryViewerIndex(idx); }, []);
+  const closeStoryViewer = useCallback(() => setStoryViewerIndex(null), []);
 
-  const handleRefreshFeed = async () => {
+  const handleRefreshFeed = useCallback(async () => {
     try { const { data:{ session } } = await supabase.auth.getSession(); await fetchDatabasePosts(session?.user?.id||null); showToast("✨ Feed refreshed"); }
     catch { showToast("Couldn't refresh — check connection"); }
-  };
-  const handlePullStart = (e) => { if (activeTab!=="home"||refreshing) return; if ((scrollContainerRef.current?.scrollTop??0)>2) return; pullStartY.current=e.clientY; };
-  const handlePullMove  = (e) => { if (pullStartY.current==null) return; const delta=e.clientY-pullStartY.current; if (delta<=0||(scrollContainerRef.current?.scrollTop??0)>2){setPullDistance(0);return;} setPullDistance(Math.min(delta*0.5,90)); };
-  const handlePullEnd   = async () => { if (pullStartY.current==null) return; pullStartY.current=null; if(pullDistance>55&&!refreshing){setRefreshing(true);await handleRefreshFeed();setRefreshing(false);}setPullDistance(0); };
+  }, [showToast]);
+  const handlePullStart = useCallback((e) => { if (activeTab!=="home"||refreshing) return; if ((scrollContainerRef.current?.scrollTop??0)>2) return; pullStartY.current=e.clientY; }, [activeTab, refreshing]);
+  const handlePullMove  = useCallback((e) => { if (pullStartY.current==null) return; const delta=e.clientY-pullStartY.current; if (delta<=0||(scrollContainerRef.current?.scrollTop??0)>2){setPullDistance(0);return;} setPullDistance(Math.min(delta*0.5,90)); }, []);
+  const handlePullEnd   = useCallback(async () => { if (pullStartY.current==null) return; pullStartY.current=null; if(pullDistance>55&&!refreshing){setRefreshing(true);await handleRefreshFeed();setRefreshing(false);}setPullDistance(0); }, [handleRefreshFeed, pullDistance, refreshing]);
 
-  // ── Search/filter ─────────────────────────────────────────────────────────
-  const cleanQuery            = searchQuery.toLowerCase().trim();
-  const aggregatedPostsList   = [...feedPosts,...myVideoPosts];
+  // ── Search/filter memoized ──────────────────────────────────────────────────
+  const cleanQuery            = useMemo(() => searchQuery.toLowerCase().trim(), [searchQuery]);
+  const aggregatedPostsList   = useMemo(() => [...feedPosts,...myVideoPosts], [feedPosts, myVideoPosts]);
   const getScore              = (p) => (p.likes||0)*3+(p.comments?.length||0)*5+(p.reposts||0)*4+(p.views||0)*0.1;
   const parseFollowerCount    = (fStr) => { if(!fStr) return 0; if(typeof fStr==="number") return fStr; if(String(fStr).toLowerCase().endsWith("k")) return parseFloat(fStr)*1000; return parseFloat(fStr)||0; };
-  const filteredPostsResults  = aggregatedPostsList.filter(p=>(p.content||p.caption||"").toLowerCase().includes(cleanQuery)).sort((a,b)=>getScore(b)-getScore(a));
-  const allAvailableProfiles  = [user,...appProfiles].filter((v,i,a)=>a.findIndex(v2=>v2.id===v.id)===i);
-  const filteredFriendsResults= allAvailableProfiles.filter(p=>{const n=p.name||"";const h=p.handle||"";return n.toLowerCase().includes(cleanQuery)||h.toLowerCase().includes(cleanQuery);}).sort((a,b)=>parseFollowerCount(b.followers_count??b.followers)-parseFollowerCount(a.followers_count??a.followers));
-  const filteredTagsResults   = aggregatedPostsList.filter(p=>{const body=(p.content||p.caption||"").toLowerCase();const tag=cleanQuery.startsWith("#")?cleanQuery:`#${cleanQuery}`;return body.includes(cleanQuery)||body.includes(tag);}).sort((a,b)=>getScore(b)-getScore(a));
+  
+  const filteredPostsResults  = useMemo(() => aggregatedPostsList.filter(p=>(p.content||p.caption||"").toLowerCase().includes(cleanQuery)).sort((a,b)=>getScore(b)-getScore(a)), [aggregatedPostsList, cleanQuery]);
+  const allAvailableProfiles  = useMemo(() => [user,...appProfiles].filter((v,i,a)=>a.findIndex(v2=>v2.id===v.id)===i), [user, appProfiles]);
+  const filteredFriendsResults= useMemo(() => allAvailableProfiles.filter(p=>{const n=p.name||"";const h=p.handle||"";return n.toLowerCase().includes(cleanQuery)||h.toLowerCase().includes(cleanQuery);}).sort((a,b)=>parseFollowerCount(b.followers_count??b.followers)-parseFollowerCount(a.followers_count??a.followers)), [allAvailableProfiles, cleanQuery]);
+  const filteredTagsResults   = useMemo(() => aggregatedPostsList.filter(p=>{const body=(p.content||p.caption||"").toLowerCase();const tag=cleanQuery.startsWith("#")?cleanQuery:`#${cleanQuery}`;return body.includes(cleanQuery)||body.includes(tag);}).sort((a,b)=>getScore(b)-getScore(a)), [aggregatedPostsList, cleanQuery]);
 
   const viewingProfile = viewingProfileId ? appProfiles.find(p => p.id===viewingProfileId)||null : null;
   const isOwnProfile   = !viewingProfileId || viewingProfileId === user?.id;
   const profileToShow  = isOwnProfile ? user : viewingProfile;
 
-  const trendingUserIds = (() => {
+  const trendingUserIds = useMemo(() => {
     const scoreMap = {};
     aggregatedPostsList.forEach(p => { scoreMap[p.authorId] = (scoreMap[p.authorId]||0)+getScore(p); });
     return new Set(Object.entries(scoreMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([id])=>id));
-  })();
+  }, [aggregatedPostsList]);
 
-  const nowTs                  = Date.now();
-  const myActiveStatusItems    = myStatusItems.filter(it => nowTs-it.createdAt < STATUS_TTL_MS);
-  const otherStatusesActive    = otherStatuses.map(s=>({...s,items:s.items.filter(it=>nowTs-it.createdAt<STATUS_TTL_MS)})).filter(s=>s.items.length>0);
-  const statusFeedForBar       = [
-    { userId:user.id, name:"Your Story", handle:user.handle, seed:user.seed||user.name, avatarUrl:user.avatarUrl, verified:!!user.verified, isMe:true, trending:false, items:myActiveStatusItems },
-    ...otherStatusesActive.map(s=>({...s,isMe:false,trending:trendingUserIds.has(s.userId)})).sort((a,b)=>(b.trending?1:0)-(a.trending?1:0)),
-  ];
+  const statusFeedForBar = useMemo(() => {
+    const nowTs = Date.now();
+    const myActiveStatusItems = myStatusItems.filter(it => nowTs-it.createdAt < STATUS_TTL_MS);
+    const otherStatusesActive = otherStatuses.map(s=>({...s,items:s.items.filter(it=>nowTs-it.createdAt<STATUS_TTL_MS)})).filter(s=>s.items.length>0);
+    return [
+      { userId:user.id, name:"Your Story", handle:user.handle, seed:user.seed||user.name, avatarUrl:user.avatarUrl, verified:!!user.verified, isMe:true, trending:false, items:myActiveStatusItems },
+      ...otherStatusesActive.map(s=>({...s,isMe:false,trending:trendingUserIds.has(s.userId)})).sort((a,b)=>(b.trending?1:0)-(a.trending?1:0)),
+    ];
+  }, [myStatusItems, otherStatuses, trendingUserIds, user]);
+
   const profileStatusIndex     = profileToShow ? statusFeedForBar.findIndex(s => s.userId===profileToShow.id) : -1;
   const profileHasActiveStory  = profileStatusIndex >= 0 && statusFeedForBar[profileStatusIndex].items.length > 0;
-  const trendingFeedPosts      = [...feedPosts].sort((a,b) => getScore(b)-getScore(a));
-  const displayedHomePosts     = homeFeedTab==="trending" ? trendingFeedPosts : feedPosts;
+  
+  const displayedHomePosts     = useMemo(() => {
+    const sorted = [...feedPosts].sort((a,b) => getScore(b)-getScore(a));
+    return homeFeedTab==="trending" ? sorted : feedPosts;
+  }, [feedPosts, homeFeedTab]);
+  
   const computedWorldRank      = Math.max(1, Math.floor(Math.max(0,(10000-userScore)/50)+1));
   const computedCampusRank     = Math.max(1, Math.floor(Math.max(0,(1000-userScore)/25)+1));
   const rankedUser             = { ...user, score:userScore, worldRank:computedWorldRank, campusRank:computedCampusRank };
-  const unreadMsgCount         = 4; // static for now — replace with real query
+  const unreadMsgCount         = 4;
 
   // ── Global CSS ────────────────────────────────────────────────────────────
   const globalStyles = `
@@ -1570,7 +1581,7 @@ export default function App() {
     @keyframes toastPop{0%{opacity:0;transform:translate(-50%,16px) scale(0.92)}10%{opacity:1;transform:translate(-50%,0) scale(1)}88%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,12px) scale(0.95)}}
     @keyframes pullSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
     @keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-    @keyframes tabFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pageTurn{0%{transform:perspective(1200px) rotateY(-90deg);transform-origin:left;opacity:0}100%{transform:perspective(1200px) rotateY(0deg);transform-origin:left;opacity:1}}
     @keyframes rankPop{0%{transform:scale(1)}50%{transform:scale(1.25) rotate(-3deg)}100%{transform:scale(1)}}
     @keyframes glowPulse{0%,100%{box-shadow:0 0 8px ${PURPLE_GLOW}}50%{box-shadow:0 0 20px ${PURPLE_GLOW},0 0 40px rgba(124,58,237,0.2)}}
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -1579,6 +1590,7 @@ export default function App() {
     button,input,textarea{font-family:inherit;}
     ::-webkit-scrollbar{width:3px;height:3px;}
     ::-webkit-scrollbar-thumb{background:${PURPLE_DIM};border-radius:2px;}
+    .page-turn { animation: pageTurn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   `;
 
   if (isAuthLoading) return (
@@ -1609,12 +1621,19 @@ export default function App() {
         />
       )}
 
-      {/* 4-icon App Header (hidden on profile) */}
+      {/* 4-icon App Header (Fixed & dynamically slides out for Immersive scroll) */}
       {!isOnProfile && (
-        <div style={{ opacity:headerVisible?1:0, pointerEvents:headerVisible?"auto":"none", transition:"opacity 0.3s ease" }}>
+        <div style={{
+          position: "fixed", top: 0, left: "50%", zIndex: 50,
+          width: "100%", maxWidth: 430,
+          transform: headerVisible ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(-100%)",
+          opacity: headerVisible ? 1 : 0,
+          pointerEvents: headerVisible ? "auto" : "none",
+          transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease"
+        }}>
           <AppHeader
             T={T} user={user}
-            onAvatarClick={() => { setViewingProfileId(null); setActiveTab("profile"); }}
+            onAvatarClick={() => handleViewProfile(user.id)}
             onSearchClick={() => setActiveTab("search")}
             onFeedbackClick={() => setSettingsOpen(true)}
             onSettingsClick={() => setSettingsOpen(true)}
@@ -1632,10 +1651,17 @@ export default function App() {
         </div>
       )}
 
-      {/* Main scroll area */}
+      {/* Main scroll area (Dynamic Full-Screen Immersive Padding) */}
       <div
         ref={scrollContainerRef}
-        style={{ flex:1, overflowY:"auto", paddingBottom:isOnProfile?24:82 }}
+        style={{ 
+          flex:1, 
+          overflowY:"auto",
+          height: "100vh",
+          paddingTop: (!isOnProfile && headerVisible) ? 60 : 0,
+          paddingBottom: (!isOnProfile && headerVisible) ? 82 : 0,
+          transition: "padding-top 0.4s cubic-bezier(0.16, 1, 0.3, 1), padding-bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1)"
+        }}
         onScroll={handleMainScroll}
         onPointerDown={handlePullStart}
         onPointerMove={handlePullMove}
@@ -1644,13 +1670,13 @@ export default function App() {
       >
         {/* ── HOME ── */}
         {activeTab === "home" && (
-          <div style={{ display:"flex", flexDirection:"column", gap:12, padding:"14px", animation:"tabFade 0.25s ease" }}>
+          <div className="page-turn" style={{ display:"flex", flexDirection:"column", gap:12, padding:"14px" }}>
             {(pullDistance > 0 || refreshing) && (
               <div style={{ display:"flex", justifyContent:"center", alignItems:"center", height:refreshing?40:pullDistance, transition:refreshing?"height 0.2s ease":"none" }}>
                 <RefreshCw size={20} color={PURPLE} style={{ animation:refreshing?"pullSpin 0.7s linear infinite":"none", transform:refreshing?undefined:`rotate(${Math.min(pullDistance*4,280)}deg)`, opacity:Math.min((refreshing?40:pullDistance)/50,1) }}/>
               </div>
             )}
-            <StoryBar T={T} statusFeed={statusFeedForBar} seenIds={seenStatusItemIds} onAvatarClick={openStoryViewer} onAddClick={() => setStatusComposerOpen(true)}/>
+            <StoryBar T={T} statusFeed={statusFeedForBar} seenIds={seenStatusItemIds} onAvatarClick={openStoryViewer} onAddClick={() => setStatusComposerOpen(true)} onViewProfile={handleViewProfile}/>
             <ActionBannerBtns T={T} user={user} tokens={tokens} onVerifyClick={() => setVerifyModalOpen(true)} onEarnClick={() => setVerifyModalOpen(true)}/>
             <div style={{ display:"flex", borderRadius:12, overflow:"hidden", border:`1px solid ${PURPLE_BD}`, flexShrink:0 }}>
               {[{id:"friends",label:"👥 Friends"},{id:"trending",label:"🔥 Trending"}].map(tab => (
@@ -1660,7 +1686,7 @@ export default function App() {
               ))}
             </div>
             {displayedHomePosts.map((post,i) => (
-              <PostCard key={post.id} T={T} post={post} allPosts={feedPosts} setAllPosts={setFeedPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/>
+              <PostCard key={post.id} T={T} post={post} setAllPosts={setFeedPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/>
             ))}
             <div style={{ opacity:headerVisible?1:0, pointerEvents:headerVisible?"auto":"none", transition:"opacity 0.3s ease" }}>
               <CreatePostFAB T={T} onClick={() => setIsCreateModalOpen(true)}/>
@@ -1673,18 +1699,16 @@ export default function App() {
 
         {/* ── CONNECT ── */}
         {activeTab === "connect" && (
-          <div style={{ animation:"tabFade 0.25s ease" }}>
+          <div className="page-turn">
             <ConnectHubView T={T} appProfiles={appProfiles} user={user} followingIds={followingIds} handleViewProfile={handleViewProfile} handleToggleFollow={handleToggleFollow}/>
           </div>
         )}
 
         {/* ── RANKING ── */}
         {activeTab === "ranking" && (
-          <div style={{ display:"flex", flexDirection:"column", gap:12, padding:"14px", animation:"tabFade 0.25s ease" }}>
+          <div className="page-turn" style={{ display:"flex", flexDirection:"column", gap:12, padding:"14px" }}>
             <LeaderboardHeader T={T}/>
-            {/* Season Rewards */}
             <SeasonRewards T={T}/>
-            {/* Score card */}
             <div style={{ background:PURPLE, borderRadius:16, padding:"14px 18px", display:"flex", alignItems:"center", gap:14, boxShadow:`0 4px 24px ${PURPLE_GLOW}`, animation:"glowPulse 3s ease-in-out infinite" }}>
               <div style={{ fontSize:32 }}>🏆</div>
               <div style={{ flex:1 }}>
@@ -1698,7 +1722,6 @@ export default function App() {
                 <div style={{ fontSize:9, color:"rgba(255,255,255,0.7)", fontWeight:700, letterSpacing:"0.5px" }}>TOTAL PTS</div>
               </div>
             </div>
-            {/* Points legend */}
             <div style={{ ...glass(T, { borderRadius:14 }), padding:"12px 16px" }}>
               <div style={{ fontWeight:700, fontSize:13, color:T.text, marginBottom:8 }}>⚡ How to Earn Points</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
@@ -1716,28 +1739,28 @@ export default function App() {
 
         {/* ── NOTIFICATIONS ── */}
         {activeTab === "notifs" && (
-          <div style={{ animation:"tabFade 0.25s ease" }}>
+          <div className="page-turn">
             <NotificationsView T={T} notifs={notifications} onProfileClick={handleViewProfile}/>
           </div>
         )}
 
         {/* ── MESSAGES (tab) ── */}
         {activeTab === "messages" && (
-          <div style={{ animation:"tabFade 0.25s ease" }}>
+          <div className="page-turn">
             <MessagesView T={T} user={user} onViewProfile={handleViewProfile}/>
           </div>
         )}
 
         {/* ── ADS ── */}
         {activeTab === "ads" && (
-          <div style={{ animation:"tabFade 0.25s ease" }}>
+          <div className="page-turn">
             <AdBoostView T={T} user={user} tokens={tokens} onSpendTokens={handleSpendTokens} onEarnClick={() => setVerifyModalOpen(true)}/>
           </div>
         )}
 
         {/* ── SEARCH ── */}
         {activeTab === "search" && (
-          <div style={{ padding:14, display:"flex", flexDirection:"column", gap:12, animation:"tabFade 0.25s ease" }}>
+          <div className="page-turn" style={{ padding:14, display:"flex", flexDirection:"column", gap:12 }}>
             <div style={{ display:"flex", alignItems:"center", gap:10, background:T.inputBg, border:`1px solid ${PURPLE_BD}`, borderRadius:20, padding:"8px 14px" }}>
               <Search size={16} color={T.muted}/>
               <input autoFocus value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Search posts, friends, or tags..." style={{ flex:1, background:"none", border:"none", color:T.text, outline:"none", fontSize:13.5 }}/>
@@ -1751,7 +1774,7 @@ export default function App() {
               ))}
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:12, marginTop:4 }}>
-              {searchSubTab==="posts" && (filteredPostsResults.length > 0 ? filteredPostsResults.map((post,i) => post.type==="video" ? <VideoPostCard key={post.id} T={T} post={post} allPosts={myVideoPosts} setAllPosts={setMyVideoPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/> : <PostCard key={post.id} T={T} post={post} allPosts={feedPosts} setAllPosts={setFeedPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/>) : <EmptyState emoji="📝" title="No matching posts" sub="Try different terms" T={T}/>)}
+              {searchSubTab==="posts" && (filteredPostsResults.length > 0 ? filteredPostsResults.map((post,i) => post.type==="video" ? <VideoPostCard key={post.id} T={T} post={post} setAllPosts={setMyVideoPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/> : <PostCard key={post.id} T={T} post={post} setAllPosts={setFeedPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/>) : <EmptyState emoji="📝" title="No matching posts" sub="Try different terms" T={T}/>)}
               {searchSubTab==="friends" && (filteredFriendsResults.length > 0 ? filteredFriendsResults.map(p => (
                 <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 10px", borderBottom:`1px solid ${T.divider}`, cursor:"pointer", background:T.cardBg, borderRadius:10 }} onClick={() => handleViewProfile(p.id)}>
                   <Avatar seed={p.seed||p.name} T={T}/>
@@ -1766,14 +1789,14 @@ export default function App() {
                   )}
                 </div>
               )) : <EmptyState emoji="👥" title="No friends found" sub="Check spelling or try someone else" T={T}/>)}
-              {searchSubTab==="tags" && (filteredTagsResults.length > 0 ? filteredTagsResults.map((post,i) => post.type==="video" ? <VideoPostCard key={post.id} T={T} post={post} allPosts={myVideoPosts} setAllPosts={setMyVideoPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/> : <PostCard key={post.id} T={T} post={post} allPosts={feedPosts} setAllPosts={setFeedPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/>) : <EmptyState emoji="#️⃣" title="No matching tags" sub="Try #FUTA, #Tech, etc." T={T}/>)}
+              {searchSubTab==="tags" && (filteredTagsResults.length > 0 ? filteredTagsResults.map((post,i) => post.type==="video" ? <VideoPostCard key={post.id} T={T} post={post} setAllPosts={setMyVideoPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/> : <PostCard key={post.id} T={T} post={post} setAllPosts={setFeedPosts} onViewProfile={handleViewProfile} onPoints={addPoints} currentUser={user} index={i}/>) : <EmptyState emoji="#️⃣" title="No matching tags" sub="Try #FUTA, #Tech, etc." T={T}/>)}
             </div>
           </div>
         )}
 
         {/* ── PROFILE ── */}
         {activeTab === "profile" && profileToShow && (
-          <div style={{ animation:"tabFade 0.25s ease" }}>
+          <div className="page-turn">
             <ProfileView
               T={T} profileUser={profileToShow} isOwnProfile={isOwnProfile}
               onBack={handleExitProfile} onEdit={handleOpenEditModal}
@@ -1797,27 +1820,27 @@ export default function App() {
 
       {/* ── 5-TAB BOTTOM NAV ── */}
       {!isOnProfile && (
-       <div style={{
-  position: "fixed", 
-  bottom: 0, 
-  left: "50%", 
-  width: "100%", 
-  maxWidth: 430,
-  background: T.isDark ? "rgba(0,0,12,0.97)" : "rgba(240,238,255,0.97)",
-  backdropFilter: "blur(16px)", 
-  borderTop: `1px solid ${PURPLE_BD}`,
-  display: "flex", 
-  justifyContent: "space-around", 
-  padding: "8px 0 18px", 
-  zIndex: 40,
-  opacity: headerVisible ? 1 : 0, 
-  transform: headerVisible ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(14px)",
-  pointerEvents: headerVisible ? "auto" : "none", 
-  transition: "opacity 0.3s ease, transform 0.3s ease",
-}}>
-  {BOTTOM_NAV.map(({ id, Icon, label }) => {
-    const isActive = activeTab === id;
-    return (
+        <div style={{
+          position: "fixed", 
+          bottom: 0, 
+          left: "50%", 
+          width: "100%", 
+          maxWidth: 430,
+          background: T.isDark ? "rgba(0,0,12,0.97)" : "rgba(240,238,255,0.97)",
+          backdropFilter: "blur(16px)", 
+          borderTop: `1px solid ${PURPLE_BD}`,
+          display: "flex", 
+          justifyContent: "space-around", 
+          padding: "8px 0 18px", 
+          zIndex: 40,
+          opacity: headerVisible ? 1 : 0, 
+          transform: headerVisible ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(100%)",
+          pointerEvents: headerVisible ? "auto" : "none", 
+          transition: "opacity 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+        }}>
+          {BOTTOM_NAV.map(({ id, Icon, label }) => {
+            const isActive = activeTab === id;
+            return (
               <div key={id} onClick={() => { setActiveTab(id); if(id==="profile")setViewingProfileId(null); }}
                 style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2, color:isActive?PURPLE:T.muted, cursor:"pointer", flex:1, transition:"color 0.2s,transform 0.15s", transform:isActive?"translateY(-1px)":"translateY(0)" }}>
                 <div style={{ ...(isActive?{filter:`drop-shadow(0 0 6px ${PURPLE_GLOW})`}:{}), position:"relative" }}>
@@ -1860,7 +1883,7 @@ export default function App() {
           onClose={closeStoryViewer}
           statusLikes={statusLikes} setStatusLikes={setStatusLikes}
           statusViews={statusViews} setStatusViews={setStatusViews}
-          currentUser={user} onPoints={addPoints}
+          currentUser={user} onPoints={addPoints} onViewProfile={handleViewProfile}
         />
       )}
 
