@@ -234,7 +234,7 @@ export default function EditProfileModal({
   editUni, setEditUni, editFaculty, setEditFaculty, editRelationship, setEditRelationship,
   editGender, setEditGender, editPhone, setEditPhone, editHobby, setEditHobby, onSave, onClose
 }) {
-  
+
   // Image states. We keep BOTH the preview URL (for display) and the real
   // File object (so the parent can actually upload it to Supabase Storage —
   // previously only the throwaway blob URL was kept, which is why avatar/
@@ -248,6 +248,7 @@ export default function EditProfileModal({
   const [cropTarget, setCropTarget] = useState(null); // 'avatar' or 'cover'
   const [pendingFile, setPendingFile] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const handleFileUpload = (e, target) => {
     const file = e.target.files[0];
@@ -267,11 +268,34 @@ export default function EditProfileModal({
     setPendingFile(null);
   };
 
+  // ───────────────────────────────────────────────────────────────
+  // BUG FIX: "Save Changes" used to get stuck on the modal forever.
+  // The form awaited `onSave(...)` but NEVER closed the modal afterwards,
+  // so even on a successful save the user stayed on the page. We now
+  // await the save, then explicitly close the modal on success (and
+  // surface an error instead of silently hanging if it fails).
+  // ───────────────────────────────────────────────────────────────
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      await onSave({ avatarFile, coverFile, avatarPreview, coverPreview });
+      onClose?.(); // ✅ leave the page / close the modal on success
+    } catch (err) {
+      console.error("[v0] Failed to save profile:", err);
+      setSaveError(err?.message || "Couldn't save your changes. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <>
       <div style={overlayStyle}>
         <div style={{ ...glass(T), width: "100%", maxWidth: 440, borderRadius: 18, maxHeight: "92vh", overflowY: "auto", boxSizing: "border-box" }}>
-          
+
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid ${T?.divider}`, position: "sticky", top: 0, background: T?.isDark ? "#0F1419" : "#fff", zIndex: 1, borderRadius: "18px 18px 0 0" }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: T?.text }}>Edit Profile</h3>
             <div onClick={onClose} style={{ cursor: "pointer", padding: 4, borderRadius: "50%", background: T?.hoverBg, display: "flex" }}>
@@ -279,17 +303,8 @@ export default function EditProfileModal({
             </div>
           </div>
 
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            if (saving) return;
-            setSaving(true);
-            try {
-              await onSave({ avatarFile, coverFile, avatarPreview, coverPreview });
-            } finally {
-              setSaving(false);
-            }
-          }} style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-            
+          <form onSubmit={handleSubmit} style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+
             {/* Cover Photo Slot */}
             <Field label="Cover Photo" T={T}>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -378,6 +393,12 @@ export default function EditProfileModal({
             <Field label="Bio" T={T}>
               <textarea value={editBio} rows={3} onChange={e => setEditBio(e.target.value)} placeholder="Tell the campus about yourself..." style={{ ...inputStyle(T), resize: "none", fontFamily: "inherit", lineHeight: 1.5 }} />
             </Field>
+
+            {saveError && (
+              <div style={{ fontSize: 12.5, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: 10, borderRadius: 10 }}>
+                {saveError}
+              </div>
+            )}
 
             <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
               <button type="button" onClick={onClose} style={btnStyle(T, "secondary")}>Cancel</button>
