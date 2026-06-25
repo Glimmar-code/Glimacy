@@ -1137,6 +1137,12 @@ const AppHeader = ({ T, user, onAvatarClick, onSearchClick, onFeedbackClick, onS
 // ─── GLOBAL CSS ───────────────────────────────────────────────────────────────
 const globalStyles = `
   @keyframes tabFade      { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)} }
+  /* ── Classic page-turn: content curls in from the left like turning a book page ── */
+  @keyframes pageTurn     {
+    0%   { opacity:0; transform:perspective(900px) rotateY(-18deg) translateX(-28px); }
+    60%  { opacity:1; transform:perspective(900px) rotateY(2deg)   translateX(2px);   }
+    100% { opacity:1; transform:perspective(900px) rotateY(0deg)   translateX(0);     }
+  }
   @keyframes cardIn       { from{opacity:0;transform:translateY(12px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)} }
   @keyframes heartPop     { 0%{transform:scale(1)}40%{transform:scale(1.45)}70%{transform:scale(0.9)}100%{transform:scale(1)} }
   @keyframes bookmarkPop  { 0%{transform:scale(1)}40%{transform:scale(1.4)}100%{transform:scale(1)} }
@@ -1150,6 +1156,9 @@ const globalStyles = `
   * { -webkit-tap-highlight-color:transparent; }
   .hide-scrollbar::-webkit-scrollbar{display:none}
   .hide-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+  /* Performance: promote animated layers to their own compositor layers */
+  .tab-content { will-change: transform, opacity; transform-origin: left center; contain: layout style; }
+  .post-card   { contain: layout style; will-change: auto; }
 `;
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
@@ -1235,18 +1244,23 @@ export default function App() {
   const [headerVisible,    setHeaderVisible]    = useState(true);
   const lastScrollY     = useRef(0);
   const scrollTimer     = useRef(null);
+  const scrollRafId     = useRef(null);
   const scrollContainerRef = useRef(null);
 
   const handleMainScroll = useCallback((e) => {
     const HIDE_TABS = ["profile","messages"];
     if(HIDE_TABS.includes(activeTab)) return;
-    const cur  = e.currentTarget.scrollTop;
-    const diff = cur - lastScrollY.current;
-    if(diff > 8)  setHeaderVisible(false);
-    if(diff < -8) setHeaderVisible(true);
-    lastScrollY.current = cur;
-    clearTimeout(scrollTimer.current);
-    scrollTimer.current = setTimeout(()=>setHeaderVisible(true), 1200);
+    // Capture the value synchronously before the rAF fires
+    const cur = e.currentTarget.scrollTop;
+    if(scrollRafId.current) cancelAnimationFrame(scrollRafId.current);
+    scrollRafId.current = requestAnimationFrame(() => {
+      const diff = cur - lastScrollY.current;
+      if(diff > 8)  setHeaderVisible(false);
+      if(diff < -8) setHeaderVisible(true);
+      lastScrollY.current = cur;
+      clearTimeout(scrollTimer.current);
+      scrollTimer.current = setTimeout(()=>setHeaderVisible(true), 1200);
+    });
   }, [activeTab]);
 
   // ── Horizontal swipe between tabs (adjustment #9) ──────────────────────────
@@ -1348,13 +1362,18 @@ export default function App() {
     return()=>subscription.unsubscribe();
   },[]);
 
-  // ── Persist ────────────────────────────────────────────────────────────────
+  // ── Persist (debounced to avoid localStorage thrashing on rapid state changes) ─
+  const lsTimer = useRef(null);
+  const debouncedSave = useCallback((key, value) => {
+    clearTimeout(lsTimer.current);
+    lsTimer.current = setTimeout(() => saveLS(key, value), 600);
+  }, []);
   useEffect(()=>saveLS(LS_KEYS.myStatuses,myStatusItems),[myStatusItems]);
   useEffect(()=>saveLS(LS_KEYS.seenStatusItems,[...seenStatusItemIds]),[seenStatusItemIds]);
   useEffect(()=>saveLS(LS_KEYS.savedArchive,savedArchive),[savedArchive]);
-  useEffect(()=>saveLS(LS_KEYS.likedIds,[...feedPosts,...myVideoPosts].filter(p=>p.liked).map(p=>p.id)),[feedPosts,myVideoPosts]);
-  useEffect(()=>saveLS(LS_KEYS.feedPosts,feedPosts),[feedPosts]);
-  useEffect(()=>saveLS(LS_KEYS.videoPosts,myVideoPosts),[myVideoPosts]);
+  useEffect(()=>debouncedSave(LS_KEYS.likedIds,[...feedPosts,...myVideoPosts].filter(p=>p.liked).map(p=>p.id)),[feedPosts,myVideoPosts]);
+  useEffect(()=>debouncedSave(LS_KEYS.feedPosts,feedPosts),[feedPosts]);
+  useEffect(()=>debouncedSave(LS_KEYS.videoPosts,myVideoPosts),[myVideoPosts]);
   useEffect(()=>saveLS(LS_KEYS.userScore,userScore),[userScore]);
   useEffect(()=>saveLS(LS_KEYS.statusLikes,statusLikes),[statusLikes]);
   useEffect(()=>saveLS(LS_KEYS.statusViews,statusViews),[statusViews]);
@@ -1556,7 +1575,13 @@ export default function App() {
 
       {/* App header — hidden on Profile + Messages (adjustment #8) */}
       {!hideChrome&&(
-        <div style={{ opacity:headerVisible?1:0,pointerEvents:headerVisible?"auto":"none",transition:"opacity 0.3s ease, transform 0.3s ease",transform:headerVisible?"translateY(0)":"translateY(-100%)" }}>
+        <div style={{
+          overflow:"hidden",
+          /* Collapse height to 0 when hidden so flex:1 scroll area expands to fill it */
+          maxHeight: headerVisible ? 80 : 0,
+          transition: "max-height 0.3s cubic-bezier(.4,0,.2,1)",
+          willChange: "max-height",
+        }}>
           <AppHeader
             T={T} user={user}
             onAvatarClick={()=>navigateTo("profile")}
@@ -1581,9 +1606,14 @@ export default function App() {
       <div
         ref={scrollContainerRef}
         style={{
-          flex:1,overflowY:"auto",paddingBottom:hideChrome?24:82,
+          flex:1,overflowY:"auto",
+          /* When bars are hidden, shrink padding so content truly fills the screen */
+          paddingBottom: hideChrome ? 24 : headerVisible ? 82 : 24,
           transform:`translateX(${swipeOffset}px)`,
-          transition:isSwipingH?"none":"transform 0.35s cubic-bezier(.25,.46,.45,.94)",
+          transition: isSwipingH
+            ? "none"
+            : "transform 0.35s cubic-bezier(.25,.46,.45,.94), padding-bottom 0.3s ease",
+          willChange: "transform",
         }}
         onScroll={handleMainScroll}
         onPointerDown={handlePullStart}
@@ -1597,7 +1627,7 @@ export default function App() {
 
         {/* ── HOME ── */}
         {activeTab==="home"&&(
-          <div style={{ display:"flex",flexDirection:"column",gap:12,padding:"14px",animation:"tabFade 0.25s ease" }}>
+          <div className="tab-content" style={{ display:"flex",flexDirection:"column",gap:12,padding:"14px",animation:"pageTurn 0.35s cubic-bezier(.25,.46,.45,.94)" }}>
             {(pullDistance>0||refreshing)&&(
               <div style={{ display:"flex",justifyContent:"center",alignItems:"center",height:refreshing?40:pullDistance,transition:refreshing?"height 0.2s ease":"none" }}>
                 <RefreshCw size={20} color={SKY_BLUE} style={{ animation:refreshing?"pullSpin 0.7s linear infinite":"none",transform:refreshing?undefined:`rotate(${Math.min(pullDistance*4,280)}deg)`,opacity:Math.min((refreshing?40:pullDistance)/50,1) }}/>

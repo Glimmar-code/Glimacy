@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react-oxc"; // Updated to use the high-performance OXC engine
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
@@ -12,12 +12,12 @@ export default defineConfig({
         name: "Glimmacy",
         short_name: "Glimmacy",
         description: "ConnectCampus - Your Campus Connected",
-        theme_color: "#0B0F12", // Your dark background color
+        theme_color: "#0B0F12", 
         background_color: "#0B0F12",
-        display: "standalone", // This removes the browser UI
+        display: "standalone", 
         icons: [
           {
-            src: "/pwa-192x192.png", // We will create these next
+            src: "/pwa-192x192.png", 
             sizes: "192x192",
             type: "image/png",
           },
