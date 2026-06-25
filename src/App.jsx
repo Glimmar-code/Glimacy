@@ -1404,7 +1404,7 @@ export default function App() {
 
   useEffect(() => { setHeaderVis(true); setPullDistance(0); pullStartY.current=null; }, [activeTab, setHeaderVis]);
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // ── Handlers ─────────────────────────────────────���─────────────────────────
   const handleToggleFollow = useCallback(async (targetId) => {
     if (!user?.id || user.id === "me") return;
     const isFollowing = followingIds.has(targetId);
@@ -1499,6 +1499,54 @@ export default function App() {
     if (amount < 0) handleEarnedTokens(-amount);
     else { setTokens(prev => Math.max(0,prev-amount)); setUser(prev => ({ ...prev, tokens:Math.max(0,(prev.tokens||0)-amount) })); }
   }, [handleEarnedTokens]);
+
+  // ── Create post: verified → Supabase (public), unverified → this device only ──
+  const handleCreatePost = useCallback(async ({ content, imageFile, type }) => {
+    const isVerified = !!user?.verified;
+
+    // Unverified users (or no real session): keep the post on this device only.
+    if (!isVerified || !user?.id || user.id === "me") {
+      const localPost = {
+        id: uid("post"), authorId: user?.id || "me", author: user?.name || "You",
+        handle: user?.handle || "@you", seed: user?.seed || user?.name, time: "Just now",
+        type: imageFile ? "image" : (type || "text"), content,
+        imageUrl: imageFile ? URL.createObjectURL(imageFile) : null,
+        likes: 0, likedBy: [], comments: [], reposts: 0, saves: 0, views: 0,
+        liked: false, saved: false, reposted: false,
+      };
+      setFeedPosts(prev => [localPost, ...prev]);
+      addPoints("POST_CREATED");
+      return;
+    }
+
+    // Verified users: upload image (if any) then insert the row into Supabase.
+    let imageUrl = null;
+    if (imageFile) {
+      const ext = (imageFile.name?.split(".").pop() || "jpg").toLowerCase();
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("post-images").upload(path, imageFile, { upsert: false });
+      if (upErr) throw new Error("Image upload failed. Please try again.");
+      const { data: pub } = supabase.storage.from("post-images").getPublicUrl(path);
+      imageUrl = pub?.publicUrl || null;
+    }
+
+    const { data, error } = await supabase
+      .from("posts")
+      .insert({ author_id: user.id, content, image_url: imageUrl })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+
+    const newPost = {
+      id: data.id, authorId: data.author_id, author: user.name, handle: user.handle,
+      seed: user.seed || user.name, time: "Just now", type: imageUrl ? "image" : "text",
+      content: data.content, imageUrl: data.image_url,
+      likes: 0, likedBy: [], comments: [], reposts: 0, saves: 0, views: 0,
+      liked: false, saved: false, reposted: false,
+    };
+    setFeedPosts(prev => [newPost, ...prev]);
+    addPoints("POST_CREATED");
+  }, [user, addPoints]);
 
   const handleUnsaveArchived = useCallback((postId) => {
     setSavedArchive(prev => prev.filter(p => p.id !== postId));
