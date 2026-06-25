@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-oxc"; // Updated to use the high-performance OXC engine
+import react from "@vitejs/plugin-react"; // Reverted to standard, which now handles Oxc natively
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
