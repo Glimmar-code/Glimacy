@@ -33,20 +33,20 @@ const getAccent = (T) => (T?.isDark ? "#00D2C4" : "#0F766E");
 function InfoRow({ icon, label, T, color }) {
   if (!label) return null;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, color: color || T?.muted }}>
-      <span style={{ fontSize: 15, flexShrink: 0, width: 20, textAlign: "center" }}>{icon}</span>
-      <span style={{ lineHeight: 1.4 }}>{label}</span>
+    <div className="flex items-center gap-3 text-sm py-1.5" style={{ color: color || T?.muted }}>
+      <span className="flex-shrink-0 w-6 flex justify-center text-lg drop-shadow-sm">{icon}</span>
+      <span className="leading-relaxed font-medium">{label}</span>
     </div>
   );
 }
 
 function StatBox({ value, label, T }) {
   return (
-    <div style={{ textAlign: "center", flex: 1, padding: "10px 0" }}>
-      <div style={{ fontSize: 20, fontWeight: 800, color: T?.text, letterSpacing: -0.5 }}>
+    <div className="text-center flex-1 py-3 group cursor-pointer transition-all hover:scale-105">
+      <div className="text-2xl font-bold tracking-tight" style={{ color: T?.text }}>
         {typeof value === "number" ? value.toLocaleString() : value}
       </div>
-      <div style={{ fontSize: 11, color: T?.mutedMid, marginTop: 3, fontWeight: 500 }}>{label}</div>
+      <div className="text-xs font-semibold uppercase tracking-wider mt-1" style={{ color: T?.mutedMid }}>{label}</div>
     </div>
   );
 }
@@ -54,35 +54,36 @@ function StatBox({ value, label, T }) {
 function RankCard({ icon, value, label, T }) {
   if (!value) return null;
   return (
-    <div style={{ flex: 1, background: T?.inputBg, border: `1px solid ${T?.inputBorder}`, borderRadius: 14, padding: "14px 10px", textAlign: "center" }}>
-      <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
-      <div style={{ fontSize: 24, fontWeight: 900, color: T?.text, letterSpacing: -1 }}>#{value}</div>
-      <div style={{ fontSize: 11, color: T?.mutedMid, marginTop: 3 }}>{label}</div>
+    <div 
+      className="flex-1 rounded-2xl p-4 text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 backdrop-blur-md"
+      style={{ background: T?.inputBg, border: `1px solid ${T?.inputBorder}` }}
+    >
+      <div className="text-3xl mb-2 drop-shadow-md">{icon}</div>
+      <div className="text-3xl font-black tracking-tighter" style={{ color: T?.text }}>#{value}</div>
+      <div className="text-xs font-bold uppercase tracking-wider mt-2" style={{ color: T?.mutedMid }}>{label}</div>
     </div>
   );
 }
 
 function MiniAvatar({ name, avatarUrl, accentColor, size = 36 }) {
   return (
-    <div style={{
-      width: size, height: size, borderRadius: "50%",
-      background: avatarUrl ? "transparent" : accentColor,
-      flexShrink: 0, overflow: "hidden",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      color: "#fff", fontSize: size * 0.38, fontWeight: 700,
-    }}>
+    <div 
+      className="rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-white font-bold shadow-sm"
+      style={{
+        width: size, height: size,
+        background: avatarUrl ? "transparent" : accentColor,
+        fontSize: size * 0.38,
+      }}
+    >
       {avatarUrl
-        ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
         : (name || "U")[0].toUpperCase()}
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
-// POST CARD — lifted state (allPosts/setAllPosts) so liking/saving a post
-// here stays in sync with the SAME post shown on Home/Search, and persists
-// to Supabase in the background (this is also what feeds the leaderboard's
-// reciprocity score — see schema.sql).
+// POST CARD
 // ─────────────────────────────────────────────────────────────────
 function PostCard({ post, T, isOwner, authorUser, allPosts, setAllPosts, onDeletePost }) {
   const accentColor = getAccent(T);
@@ -135,90 +136,119 @@ function PostCard({ post, T, isOwner, authorUser, allPosts, setAllPosts, onDelet
   const authorVerified = authorUser?.isVerified ?? false;
 
   return (
-    <div style={{ border: `1px solid ${T?.divider}`, borderRadius: 16, overflow: "hidden", background: T?.bg, boxShadow: "0 2px 12px rgba(0,0,0,0.055)" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 15px 10px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <MiniAvatar name={authorName} avatarUrl={authorAvatarUrl} accentColor={accentColor} size={38} />
+    <div 
+      className="rounded-3xl overflow-hidden mb-6 transition-all duration-300 hover:shadow-xl group"
+      style={{ border: `1px solid ${T?.divider}`, background: T?.bg, boxShadow: "0 8px 30px rgba(0,0,0,0.04)" }}
+    >
+      <div className="flex items-center justify-between p-4 pb-2">
+        <div className="flex items-center gap-3">
+          <MiniAvatar name={authorName} avatarUrl={authorAvatarUrl} accentColor={accentColor} size={42} />
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ fontWeight: 700, fontSize: 14, color: T?.text }}>{authorName}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-[15px]" style={{ color: T?.text }}>{authorName}</span>
               {authorVerified && (
-                <div style={{ width: 14, height: 14, borderRadius: "50%", background: "linear-gradient(135deg,#00d4ff,#6c63ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7.5, color: "#fff", fontWeight: 900 }}>✓</div>
+                <div className="w-[16px] h-[16px] rounded-full bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center text-white text-[9px] font-black shadow-sm">✓</div>
               )}
               {post.isLocal && (
-                <span style={{ fontSize: 9.5, color: T?.mutedMid, border: `1px solid ${T?.inputBorder}`, borderRadius: 8, padding: "1px 6px" }}>On this device</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md ml-1" style={{ color: T?.mutedMid, border: `1px solid ${T?.inputBorder}` }}>On this device</span>
               )}
             </div>
-            <div style={{ fontSize: 11, color: T?.mutedMid }}>{post.time}</div>
+            <div className="text-xs font-medium" style={{ color: T?.mutedMid }}>{post.time}</div>
           </div>
         </div>
         {isOwner && onDeletePost && (
-          <button onClick={() => onDeletePost(post)} style={{ background: "none", border: "none", padding: 6, cursor: "pointer", color: "#ef4444", borderRadius: 8, display: "flex", alignItems: "center" }}>
-            <Trash2 size={15} />
+          <button 
+            onClick={() => onDeletePost(post)} 
+            className="p-2 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+          >
+            <Trash2 size={16} />
           </button>
         )}
       </div>
 
-      <p style={{ margin: 0, padding: "2px 15px 14px", fontSize: 14, lineHeight: 1.6, color: T?.text, whiteSpace: "pre-wrap" }}>
+      <p className="px-4 py-2 text-[15px] leading-relaxed whitespace-pre-wrap" style={{ color: T?.text }}>
         {post.content}
       </p>
 
       {post.type === "image" && post.imageUrl && (
-        <div style={{ margin: "0 15px 12px", borderRadius: 10, overflow: "hidden" }}>
-          <img src={post.imageUrl} alt="" style={{ width: "100%", maxHeight: 280, objectFit: "cover", display: "block" }} />
+        <div className="px-4 pb-3">
+          <div className="rounded-2xl overflow-hidden shadow-sm relative group-hover:shadow-md transition-shadow">
+            <img src={post.imageUrl} alt="" className="w-full max-h-[320px] object-cover block transition-transform duration-500 hover:scale-105" />
+          </div>
         </div>
       )}
 
-      <div style={{ display: "flex", justifyContent: "space-between", padding: "0 15px 10px", fontSize: 12, color: T?.mutedMid }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Eye size={13} /> {(post.views || 0).toLocaleString()} views</span>
-        <div style={{ display: "flex", gap: 14 }}>
+      <div className="flex justify-between px-5 pb-3 text-xs font-medium" style={{ color: T?.mutedMid }}>
+        <span className="flex items-center gap-1.5 bg-black/5 px-2 py-1 rounded-lg"><Eye size={14} /> {(post.views || 0).toLocaleString()} views</span>
+        <div className="flex gap-4 items-center">
           <span>{likeCount.toLocaleString()} likes</span>
           <span>{comments.length} comments</span>
         </div>
       </div>
 
-      <div style={{ height: 1, background: T?.divider }} />
+      <div className="h-[1px] w-full" style={{ background: T?.divider }} />
 
-      <div style={{ display: "flex" }}>
+      <div className="flex px-2 py-1">
         {[
-          { icon: liked ? <Heart size={16} fill="#ec4899" color="#ec4899" /> : <Heart size={16} color={T?.muted} />, label: liked ? "Liked" : "Like", action: handleLike, activeColor: "#ec4899", active: liked },
-          { icon: <MessageCircle size={16} color={showComments ? accentColor : T?.muted} />, label: "Comment", action: () => setShowComments(v => !v), activeColor: accentColor, active: showComments },
-          { icon: saved ? <BookmarkCheck size={16} fill={accentColor} color={accentColor} /> : <Bookmark size={16} color={T?.muted} />, label: saved ? "Saved" : "Save", action: handleSave, activeColor: accentColor, active: saved },
-          { icon: <Share2 size={16} color={T?.muted} />, label: "Share", action: () => {}, activeColor: accentColor, active: false },
+          { icon: liked ? <Heart size={18} fill="#ec4899" color="#ec4899" /> : <Heart size={18} />, label: liked ? "Liked" : "Like", action: handleLike, activeColor: "#ec4899", active: liked },
+          { icon: <MessageCircle size={18} color={showComments ? accentColor : undefined} />, label: "Comment", action: () => setShowComments(v => !v), activeColor: accentColor, active: showComments },
+          { icon: saved ? <BookmarkCheck size={18} fill={accentColor} color={accentColor} /> : <Bookmark size={18} />, label: saved ? "Saved" : "Save", action: handleSave, activeColor: accentColor, active: saved },
+          { icon: <Share2 size={18} />, label: "Share", action: () => {}, activeColor: accentColor, active: false },
         ].map((btn, i) => (
-          <button key={i} onClick={btn.action} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, background: "none", border: "none", padding: "10px 0", color: btn.active ? btn.activeColor : T?.muted, fontSize: 12.5, fontWeight: btn.active ? 700 : 500, cursor: "pointer", transition: "color 0.18s" }}>
-            {btn.icon}{btn.label}
+          <button 
+            key={i} 
+            onClick={btn.action} 
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-200 hover:bg-black/5"
+            style={{ 
+              color: btn.active ? btn.activeColor : T?.muted, 
+              fontSize: 13, 
+              fontWeight: btn.active ? 700 : 500
+            }}
+          >
+            {btn.icon}<span className="hidden sm:inline">{btn.label}</span>
           </button>
         ))}
       </div>
 
       {showComments && (
-        <div style={{ borderTop: `1px solid ${T?.divider}`, padding: "12px 15px", display: "flex", flexDirection: "column", gap: 10 }}>
-          {comments.length === 0 && <p style={{ margin: 0, fontSize: 13, color: T?.mutedMid, textAlign: "center" }}>No comments yet. Be the first!</p>}
+        <div className="p-4 flex flex-col gap-4" style={{ borderTop: `1px solid ${T?.divider}` }}>
+          {comments.length === 0 && <p className="text-sm text-center italic py-2" style={{ color: T?.mutedMid }}>No comments yet. Be the first!</p>}
           {comments.map((c) => (
-            <div key={c.id} style={{ display: "flex", gap: 8 }}>
-              <MiniAvatar name={c.name} accentColor={accentColor} size={30} />
-              <div style={{ flex: 1 }}>
-                <div style={{ background: T?.inputBg, borderRadius: 12, padding: "8px 12px", border: `1px solid ${T?.inputBorder}` }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: T?.text, marginBottom: 2 }}>{c.name}</div>
-                  <div style={{ fontSize: 13, color: T?.text, lineHeight: 1.45 }}>{c.text}</div>
+            <div key={c.id} className="flex gap-3">
+              <MiniAvatar name={c.name} accentColor={accentColor} size={32} />
+              <div className="flex-1">
+                <div className="rounded-2xl rounded-tl-none px-4 py-2 shadow-sm" style={{ background: T?.inputBg, border: `1px solid ${T?.inputBorder}` }}>
+                  <div className="text-[13px] font-bold mb-1" style={{ color: T?.text }}>{c.name}</div>
+                  <div className="text-[14px] leading-relaxed" style={{ color: T?.text }}>{c.text}</div>
                 </div>
-                <div style={{ display: "flex", gap: 12, fontSize: 11, color: T?.mutedMid, marginTop: 3, paddingLeft: 6 }}>
+                <div className="flex gap-3 text-xs mt-1.5 ml-2 font-medium" style={{ color: T?.mutedMid }}>
                   <span>{c.time}</span>
                 </div>
               </div>
             </div>
           ))}
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
-            <MiniAvatar name="You" accentColor={accentColor} size={30} />
-            <div style={{ flex: 1, display: "flex", gap: 6, alignItems: "center" }}>
+          <div className="flex gap-3 items-center mt-2">
+            <MiniAvatar name="You" accentColor={accentColor} size={36} />
+            <div className="flex-1 flex gap-2 items-center relative">
               <input
                 value={commentText} onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleComment()}
                 placeholder="Write a comment..."
-                style={{ flex: 1, padding: "9px 14px", borderRadius: 20, background: T?.inputBg, border: `1px solid ${T?.inputBorder}`, color: T?.text, outline: "none", fontSize: 13 }}
+                className="flex-1 py-2.5 pl-4 pr-12 rounded-full text-[14px] shadow-sm transition-all focus:ring-2"
+                style={{ 
+                  background: T?.inputBg, border: `1px solid ${T?.inputBorder}`, color: T?.text, 
+                  outline: "none", "--tw-ring-color": accentColor
+                }}
               />
-              {commentText.trim() && <button onClick={handleComment} style={{ background: "none", border: "none", color: accentColor, fontWeight: 700, fontSize: 13.5, padding: "0 4px", cursor: "pointer" }}>Post</button>}
+              {commentText.trim() && (
+                <button 
+                  onClick={handleComment} 
+                  className="absolute right-2 top-1/2 -translate-y-1/2 font-bold text-[14px] px-3 py-1 rounded-full hover:bg-black/5 transition-colors"
+                  style={{ color: accentColor }}
+                >
+                  Post
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -227,28 +257,37 @@ function PostCard({ post, T, isOwner, authorUser, allPosts, setAllPosts, onDelet
   );
 }
 
-// Compact card for video posts (kept lightweight — full playback controls
-// live in the dedicated VideoPostCard exported from App.jsx; duplicating
-// that entire component here isn't worth the divergence risk).
 function VideoTile({ post, T, isOwner, onDeletePost }) {
   return (
-    <div style={{ border: `1px solid ${T?.divider}`, borderRadius: 16, overflow: "hidden", background: T?.bg, position: "relative" }}>
-      <img src={post.thumbnail} alt="" style={{ width: "100%", height: 180, objectFit: "cover", display: "block" }} />
-      <div style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,0.55)", color: "#fff", fontSize: 11, padding: "3px 8px", borderRadius: 8, display: "flex", alignItems: "center", gap: 4 }}>
-        <Eye size={11} /> {(post.views || 0).toLocaleString()}
+    <div 
+      className="rounded-2xl overflow-hidden relative group cursor-pointer shadow-sm hover:shadow-md transition-all duration-300"
+      style={{ border: `1px solid ${T?.divider}`, background: T?.bg }}
+    >
+      <img src={post.thumbnail} alt="" className="w-full h-[220px] object-cover block transition-transform duration-700 group-hover:scale-105" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity" />
+      
+      <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 border border-white/10">
+        <Eye size={12} /> {(post.views || 0).toLocaleString()}
       </div>
+      
       {isOwner && onDeletePost && (
-        <button onClick={() => onDeletePost(post)} style={{ position: "absolute", top: 10, left: 10, background: "rgba(0,0,0,0.55)", border: "none", borderRadius: 8, padding: 6, color: "#fff", cursor: "pointer" }}>
+        <button 
+          onClick={() => onDeletePost(post)} 
+          className="absolute top-3 left-3 bg-black/60 backdrop-blur-md border border-white/10 rounded-full p-2 text-white/90 hover:text-red-400 hover:bg-black/80 transition-colors opacity-0 group-hover:opacity-100"
+        >
           <Trash2 size={14} />
         </button>
       )}
-      <p style={{ margin: 0, padding: "10px 12px", fontSize: 13, color: T?.text, lineHeight: 1.45 }}>{post.caption}</p>
+      
+      <div className="absolute bottom-0 left-0 right-0 p-3">
+        <p className="m-0 text-[13px] font-medium text-white/90 leading-snug line-clamp-2 drop-shadow-md">{post.caption}</p>
+      </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
-// MAIN PROFILE COMPONENT — signature now matches what App.jsx sends.
+// MAIN PROFILE COMPONENT
 // ─────────────────────────────────────────────────────────────────
 export default function Profile({
   T,
@@ -279,15 +318,10 @@ export default function Profile({
   const user = profileUser || {};
   const goBack = () => (onBack ? onBack() : null);
 
-  // Real posts belonging to this profile, pulled from the SAME pools Home
-  // renders from — not a separate sample/mock list.
   const ownTextPosts = feedPosts.filter((p) => p.authorId === user.id);
   const ownVideoPosts = myVideoPosts.filter((p) => p.authorId === user.id);
   const allOwnPosts = [...ownTextPosts, ...ownVideoPosts].sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
 
-  // "Liked"/"Saved" reflect this session's local interaction flags. We only
-  // expose them for your OWN profile — there's no reliable way to know what
-  // posts a DIFFERENT user liked/saved from data available on the client.
   const likedPosts = isOwnProfile ? [...feedPosts, ...myVideoPosts].filter((p) => p.liked) : [];
   const savedPosts = isOwnProfile ? [...feedPosts, ...myVideoPosts].filter((p) => p.saved) : [];
 
@@ -316,44 +350,64 @@ export default function Profile({
   };
 
   return (
-    <div style={{ background: T?.bg, minHeight: "100%", color: T?.text, paddingBottom: 50 }}>
+    <div className="min-h-full pb-16 font-sans antialiased" style={{ background: T?.bg, color: T?.text }}>
       {/* ══ STICKY HEADER ══ */}
-      <div style={{ position: "sticky", top: 0, background: T?.bg, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, zIndex: 10, borderBottom: `1px solid ${T?.divider}` }}>
-        <ArrowLeft size={22} color={T?.text} onClick={goBack} style={{ cursor: "pointer", flexShrink: 0 }} />
-        <div style={{ minWidth: 0 }}>
-          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.name}</h2>
-          <p style={{ margin: 0, fontSize: 11, color: T?.mutedMid }}>{allOwnPosts.length} posts</p>
+      <div 
+        className="sticky top-0 px-4 py-3 flex items-center gap-4 z-20 backdrop-blur-xl bg-opacity-80 shadow-sm"
+        style={{ background: `${T?.bg}cc`, borderBottom: `1px solid ${T?.divider}` }}
+      >
+        <button 
+          onClick={goBack} 
+          className="p-2 rounded-full hover:bg-black/5 transition-colors flex-shrink-0"
+        >
+          <ArrowLeft size={22} color={T?.text} />
+        </button>
+        <div className="min-w-0 flex-1">
+          <h2 className="m-0 text-[18px] font-extrabold truncate">{user.name}</h2>
+          <p className="m-0 text-[12px] font-medium" style={{ color: T?.mutedMid }}>{allOwnPosts.length} posts</p>
         </div>
       </div>
 
       {/* ══ COVER + AVATAR ══ */}
-      <div style={{ position: "relative", height: 195, flexShrink: 0, background: user.coverUrl ? undefined : `linear-gradient(135deg, ${accentColor}33, ${T?.surface})` }}>
+      <div 
+        className="relative h-[240px] flex-shrink-0 w-full"
+        style={{ background: user.coverUrl ? undefined : `linear-gradient(135deg, ${accentColor}44, ${T?.surface})` }}
+      >
         {user.coverUrl && (
-          <img src={user.coverUrl} alt="Cover" style={{ width: "100%", height: "100%", objectFit: "cover", cursor: "pointer", display: "block" }}
-            onClick={() => { setViewingImage(user.coverUrl); onImagePreview?.({ type: "cover", user }); }} />
+          <img 
+            src={user.coverUrl} alt="Cover" 
+            className="w-full h-full object-cover cursor-pointer block transition-transform duration-700 hover:scale-[1.02]"
+            onClick={() => { setViewingImage(user.coverUrl); onImagePreview?.({ type: "cover", user }); }} 
+          />
         )}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.45))" }} />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/60" />
 
-        <div style={{ position: "absolute", bottom: -46, left: 18 }}>
+        <div className="absolute -bottom-14 left-5">
           <div
             onClick={() => { if (user.avatarUrl) { setViewingImage(user.avatarUrl); onImagePreview?.({ type: "avatar", user }); } }}
+            className="w-[110px] h-[110px] rounded-full overflow-hidden cursor-pointer flex items-center justify-center text-white text-4xl font-black transition-transform duration-300 hover:scale-105 z-10 relative"
             style={{
-              width: 90, height: 90, borderRadius: "50%",
-              border: `4px solid ${hasActiveStory ? accentColor : T?.bg}`,
-              boxShadow: hasActiveStory ? `0 0 0 2px ${accentColor}66, 0 4px 20px rgba(0,0,0,0.18)` : "0 4px 20px rgba(0,0,0,0.18)",
-              overflow: "hidden", cursor: "pointer", background: user.avatarUrl ? "transparent" : `linear-gradient(135deg, ${accentColor}99, ${accentColor})`,
-              display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 28, fontWeight: 700,
+              border: `5px solid ${hasActiveStory ? accentColor : T?.bg}`,
+              boxShadow: hasActiveStory ? `0 0 0 3px ${accentColor}55, 0 8px 30px rgba(0,0,0,0.3)` : "0 8px 30px rgba(0,0,0,0.3)",
+              background: user.avatarUrl ? "transparent" : `linear-gradient(135deg, ${accentColor}cc, ${accentColor})`,
             }}
           >
-            {user.avatarUrl ? <img src={user.avatarUrl} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (user.name || "U")[0].toUpperCase()}
+            {user.avatarUrl ? <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : (user.name || "U")[0].toUpperCase()}
           </div>
           {user.isOnline && (
-            <div style={{ position: "absolute", bottom: 4, right: 4, width: 18, height: 18, borderRadius: "50%", background: "#22c55e", border: `3px solid ${T?.bg}` }} />
+            <div 
+              className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-green-500 z-20 shadow-sm"
+              style={{ border: `4px solid ${T?.bg}` }} 
+            />
           )}
           {hasActiveStory && (
             <button
               onClick={onOpenStory}
-              style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20, border: "none", background: accentColor, color: T?.isDark ? "#0B0F12" : "#fff", whiteSpace: "nowrap", cursor: "pointer", boxShadow: `0 2px 8px ${accentColor}66` }}
+              className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[11px] font-bold px-3.5 py-1 rounded-full whitespace-nowrap cursor-pointer z-20 transition-transform hover:scale-110 border-2"
+              style={{ 
+                background: accentColor, color: T?.isDark ? "#0B0F12" : "#fff", 
+                boxShadow: `0 4px 12px ${accentColor}88`, borderColor: T?.bg 
+              }}
             >
               View status
             </button>
@@ -362,64 +416,76 @@ export default function Profile({
       </div>
 
       {/* ══ PROFILE INFO ══ */}
-      <div style={{ padding: "56px 18px 18px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>{user.name}</h1>
+      <div className="px-5 pt-[70px] pb-6">
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="m-0 text-[26px] font-black tracking-tight drop-shadow-sm">{user.name}</h1>
               {user.isVerified && (
-                <div style={{ width: 20, height: 20, borderRadius: "50%", background: "linear-gradient(135deg,#00d4ff,#6c63ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 900, flexShrink: 0 }}>✓</div>
+                <div className="w-[22px] h-[22px] rounded-full bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center text-white text-[11px] font-black shadow-md flex-shrink-0">✓</div>
               )}
             </div>
-            <p style={{ margin: "3px 0 0", fontSize: 13, color: T?.mutedMid }}>{user.handle}</p>
+            <p className="m-0 mt-1 text-[14px] font-medium" style={{ color: T?.mutedMid }}>{user.handle}</p>
           </div>
 
-          <div style={{ display: "flex", gap: 8, flexShrink: 0, marginTop: 2 }}>
+          <div className="flex gap-2 flex-shrink-0 mt-1">
             {isOwnProfile ? (
               <>
-                <button onClick={onEdit} style={{ padding: "8px 14px", borderRadius: 10, border: `1.5px solid ${T?.inputBorder}`, background: T?.bg, color: T?.text, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                <button 
+                  onClick={onEdit} 
+                  className="px-4 py-2 rounded-xl text-[14px] font-bold cursor-pointer transition-all hover:bg-black/5 hover:scale-105 active:scale-95 shadow-sm"
+                  style={{ border: `1.5px solid ${T?.inputBorder}`, background: T?.bg, color: T?.text }}
+                >
                   Edit Profile
                 </button>
                 {!user.isVerified && (
-                  <button onClick={() => setVerifyStep(1)} style={{ padding: "8px 14px", borderRadius: 10, border: "none", background: accentColor, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-                    <Sparkles size={13} /> Get Verified
+                  <button 
+                    onClick={() => setVerifyStep(1)} 
+                    className="px-4 py-2 rounded-xl border-none text-white text-[14px] font-bold cursor-pointer flex items-center gap-1.5 transition-all hover:opacity-90 hover:shadow-lg hover:scale-105 active:scale-95 shadow-md"
+                    style={{ background: accentColor }}
+                  >
+                    <Sparkles size={16} /> Get Verified
                   </button>
                 )}
               </>
             ) : (
               <>
-                <button onClick={() => onViewProfile ? null : null} onClickCapture={() => {}} style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: accentColor, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                <button 
+                  onClick={() => onViewProfile ? null : null} 
+                  className="px-5 py-2 rounded-xl border-none text-white text-[14px] font-bold cursor-pointer transition-all hover:opacity-90 hover:shadow-lg hover:scale-105 active:scale-95 shadow-md"
+                  style={{ background: accentColor }}
+                >
                   💬 Message
                 </button>
                 <button
                   onClick={onToggleFollow}
+                  className="px-4 py-2 rounded-xl text-[14px] font-bold cursor-pointer flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 shadow-sm"
                   style={{
-                    padding: "8px 12px", borderRadius: 10,
                     border: `1.5px solid ${isFollowing ? T?.inputBorder : accentColor}`,
-                    background: "transparent", color: isFollowing ? T?.text : accentColor,
-                    fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
+                    background: isFollowing ? "transparent" : accentColor, 
+                    color: isFollowing ? T?.text : "#fff",
                   }}
                 >
-                  {isFollowing ? <><UserCheck size={14} /> Following</> : <><UserPlus size={14} /> Follow</>}
+                  {isFollowing ? <><UserCheck size={16} /> Following</> : <><UserPlus size={16} /> Follow</>}
                 </button>
               </>
             )}
           </div>
         </div>
 
-        {user.bio && <p style={{ margin: "13px 0 0", fontSize: 14, lineHeight: 1.55, color: T?.text }}>{user.bio}</p>}
+        {user.bio && <p className="mt-4 text-[15px] leading-relaxed font-medium" style={{ color: T?.text }}>{user.bio}</p>}
 
-        <div style={{ display: "flex", marginTop: 18, borderTop: `1px solid ${T?.divider}`, borderBottom: `1px solid ${T?.divider}` }}>
+        <div className="flex mt-6 py-2 rounded-2xl shadow-sm" style={{ background: T?.inputBg, border: `1px solid ${T?.divider}` }}>
           <StatBox value={allOwnPosts.length} label="Posts" T={T} />
-          <div style={{ width: 1, background: T?.divider }} />
+          <div className="w-[1px] my-4 opacity-50" style={{ background: T?.divider }} />
           <StatBox value={user.followersCount || 0} label="Followers" T={T} />
-          <div style={{ width: 1, background: T?.divider }} />
+          <div className="w-[1px] my-4 opacity-50" style={{ background: T?.divider }} />
           <StatBox value={user.followingCount || 0} label="Following" T={T} />
-          <div style={{ width: 1, background: T?.divider }} />
+          <div className="w-[1px] my-4 opacity-50" style={{ background: T?.divider }} />
           <StatBox value={totalLikes} label="Likes" T={T} />
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 11, marginTop: 18 }}>
+        <div className="flex flex-col gap-1 mt-6 px-2">
           {user.university && <InfoRow icon="🎓" label={user.university} T={T} />}
           {user.faculty && <InfoRow icon="🏛️" label={`Faculty of ${user.faculty}`} T={T} />}
           {user.gender && <InfoRow icon={user.gender === "Female" ? "👩" : "👨"} label={user.gender} T={T} />}
@@ -431,88 +497,118 @@ export default function Profile({
         </div>
 
         {(user.worldRank > 0 || user.campusRank > 0) && (
-          <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+          <div className="flex gap-4 mt-8">
             {user.worldRank > 0 && <RankCard icon="🌍" value={user.worldRank} label="World Rank" T={T} />}
             {user.campusRank > 0 && <RankCard icon="🏫" value={user.campusRank} label="Campus Rank" T={T} />}
           </div>
         )}
       </div>
 
-      <div style={{ height: 8, background: T?.divider }} />
+      <div className="h-2 w-full" style={{ background: T?.divider }} />
 
-      <div style={{ display: "flex", borderBottom: `1px solid ${T?.divider}`, background: T?.bg }}>
+      <div className="flex sticky top-[62px] z-10 backdrop-blur-xl bg-opacity-90 shadow-sm" style={{ borderBottom: `1px solid ${T?.divider}`, background: `${T?.bg}ee` }}>
         {tabs.map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, padding: "13px 0", background: "none", border: "none", borderBottom: activeTab === tab ? `2.5px solid ${accentColor}` : "2.5px solid transparent", color: activeTab === tab ? accentColor : T?.muted, fontWeight: activeTab === tab ? 700 : 500, fontSize: 13.5, cursor: "pointer", transition: "all 0.2s" }}>
+          <button 
+            key={tab} 
+            onClick={() => setActiveTab(tab)} 
+            className="flex-1 py-4 bg-transparent border-none text-[14px] cursor-pointer transition-all duration-300 relative"
+            style={{ 
+              color: activeTab === tab ? accentColor : T?.muted, 
+              fontWeight: activeTab === tab ? 800 : 600, 
+            }}
+          >
             {tab === "posts" ? "📝 Posts" : tab === "liked" ? "❤️ Liked" : "🔖 Saved"}
+            {activeTab === tab && (
+              <div 
+                className="absolute bottom-0 left-[20%] right-[20%] h-[3px] rounded-t-full shadow-[0_-2px_10px_rgba(0,0,0,0.2)] transition-all"
+                style={{ background: accentColor }}
+              />
+            )}
           </button>
         ))}
       </div>
 
-      <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* ══ FEED ══ */}
+      <div className="p-4 pt-6">
         {postsForTab.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "44px 20px", color: T?.mutedMid }}>
-            <p style={{ margin: 0, fontSize: 36 }}>{activeTab === "posts" ? "📝" : activeTab === "liked" ? "❤️" : "🔖"}</p>
-            <p style={{ margin: "10px 0 0", fontSize: 14 }}>No {activeTab} posts yet.</p>
+          <div className="text-center py-16 flex flex-col items-center">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mb-4" style={{ background: T?.inputBg }}>
+              {activeTab === "liked" ? "🤍" : activeTab === "saved" ? "🔖" : "📝"}
+            </div>
+            <p className="text-[15px] font-semibold" style={{ color: T?.mutedMid }}>
+              No {activeTab} yet.
+            </p>
           </div>
         ) : (
-          postsForTab.map((post) =>
-            post.type === "video" ? (
-              <VideoTile key={post.id} post={post} T={T} isOwner={isOwnProfile && activeTab === "posts"} onDeletePost={deletePost} />
-            ) : (
-              <PostCard
-                key={post.id} post={post} T={T} isOwner={isOwnProfile && activeTab === "posts"}
-                authorUser={user} allPosts={feedPosts} setAllPosts={setFeedPosts} onDeletePost={deletePost}
-              />
-            )
-          )
+          <div className="columns-1 md:columns-2 gap-4">
+            {postsForTab.map((post) => (
+              <div key={post.id} className="break-inside-avoid mb-4">
+                {post.type === "video" ? (
+                  <VideoTile post={post} T={T} isOwner={isOwnProfile} onDeletePost={deletePost} />
+                ) : (
+                  <PostCard post={post} T={T} isOwner={isOwnProfile} authorUser={user} allPosts={postsForTab} setAllPosts={setFeedPosts} onDeletePost={deletePost} />
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* ══ VERIFY POPUP — Step 1 ══ */}
-      {isOwnProfile && verifyStep === 1 && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", justifyContent: "center", alignItems: "center", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(10px)", padding: 16 }}>
-          <div style={{ background: T?.cardBg, backdropFilter: "blur(18px)", border: `1px solid ${T?.cardBorder}`, boxShadow: T?.cardShadow, width: 310, padding: 28, borderRadius: 20, textAlign: "center", position: "relative" }}>
-            <button type="button" onClick={() => setVerifyStep(0)} style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.3)", border: "none", borderRadius: "50%", padding: 6, cursor: "pointer", color: "#fff" }}><X size={16} /></button>
-            <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
-            <h3 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 800, color: T?.text }}>Get Verified</h3>
-            <p style={{ margin: "0 0 22px", fontSize: 13, color: T?.muted, lineHeight: 1.5 }}>
-              A verified badge shows your account is authentic — and lets your posts publish to everyone instead of staying on this device.
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <button type="button" disabled={verifying} onClick={handleCompleteVerification} style={{ padding: "13px", borderRadius: 12, border: "none", background: accentColor, color: "#fff", fontWeight: 700, fontSize: 14, cursor: verifying ? "default" : "pointer", opacity: verifying ? 0.7 : 1 }}>
-                {verifying ? "Verifying…" : "💳 Pay with Card"}
-              </button>
-              <button type="button" onClick={() => setVerifyStep(2)} style={{ padding: "13px", borderRadius: 12, border: `1.5px solid ${T?.inputBorder}`, background: T?.bg, color: T?.text, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
-                🪙 Earn a Token
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ══ VERIFY POPUP — Step 2 (Token) ══ */}
-      {isOwnProfile && verifyStep === 2 && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", justifyContent: "center", alignItems: "center", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(10px)", padding: 16 }}>
-          <div style={{ background: T?.cardBg, backdropFilter: "blur(18px)", border: `1px solid ${T?.cardBorder}`, boxShadow: T?.cardShadow, width: 310, padding: 28, borderRadius: 20, textAlign: "center", position: "relative" }}>
-            <button type="button" onClick={() => setVerifyStep(0)} style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.3)", border: "none", borderRadius: "50%", padding: 6, cursor: "pointer", color: "#fff" }}><X size={16} /></button>
-            <div style={{ fontSize: 40, marginBottom: 10 }}>🪙</div>
-            <h3 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 800, color: T?.text }}>Earn Token</h3>
-            <p style={{ margin: "0 0 22px", fontSize: 13, color: T?.muted, lineHeight: 1.5 }}>Complete one of these actions to earn your verification token</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <button type="button" disabled={verifying} onClick={handleCompleteVerification} style={{ padding: "13px", borderRadius: 12, border: `1.5px solid ${T?.inputBorder}`, background: T?.bg, color: T?.text, fontWeight: 600, fontSize: 14, cursor: verifying ? "default" : "pointer", opacity: verifying ? 0.7 : 1 }}>
-                {verifying ? "Verifying…" : "🔄 Swap Token"}
-              </button>
-              <button type="button" disabled={verifying} onClick={handleCompleteVerification} style={{ padding: "13px", borderRadius: 12, border: `1.5px solid ${T?.inputBorder}`, background: T?.bg, color: T?.text, fontWeight: 600, fontSize: 14, cursor: verifying ? "default" : "pointer", opacity: verifying ? 0.7 : 1 }}>
-                📺 Watch Ad
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Full-screen Image Viewer */}
       {viewingImage && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 100, display: "flex", justifyContent: "center", alignItems: "center", background: "rgba(0,0,0,0.85)", padding: 16 }} onClick={() => setViewingImage(null)}>
-          <img src={viewingImage} alt="Preview" style={{ maxWidth: "100%", maxHeight: "90vh", borderRadius: 12 }} />
+        <div 
+          className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setViewingImage(null)}
+        >
+          <button 
+            className="absolute top-6 right-6 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            onClick={() => setViewingImage(null)}
+          >
+            <X size={24} />
+          </button>
+          <img 
+            src={viewingImage} alt="" 
+            className="max-w-full max-h-full object-contain rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()} 
+          />
+        </div>
+      )}
+
+      {/* Verify Modal */}
+      {verifyStep === 1 && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div 
+            className="w-full sm:max-w-md rounded-t-[32px] sm:rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300"
+            style={{ background: T?.surface || T?.bg, border: `1px solid ${T?.divider}` }}
+          >
+            <div className="w-12 h-1.5 rounded-full mb-6 opacity-30" style={{ background: T?.text }} />
+            
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 flex items-center justify-center text-white mb-6 shadow-[0_10px_30px_rgba(124,58,237,0.4)]">
+              <Sparkles size={36} />
+            </div>
+            
+            <h2 className="text-2xl font-black mb-3 tracking-tight" style={{ color: T?.text }}>Get Verified</h2>
+            <p className="text-[15px] leading-relaxed font-medium mb-8" style={{ color: T?.muted }}>
+              Stand out with a verified badge! Requires either <span className="font-bold text-purple-500">₦2,500</span> OR <span className="font-bold text-purple-500">10,000 tokens</span> + 20 verified followers.
+            </p>
+            
+            <button
+              onClick={handleCompleteVerification}
+              disabled={verifying}
+              className="w-full py-4 rounded-2xl text-white font-bold text-[16px] transition-all hover:scale-[1.02] active:scale-95 shadow-lg flex items-center justify-center gap-2"
+              style={{ background: `linear-gradient(135deg, ${accentColor}, #4f46e5)`, opacity: verifying ? 0.7 : 1 }}
+            >
+              {verifying ? "Processing..." : "Continue"} <ArrowLeft className="rotate-180" size={18} />
+            </button>
+            
+            <button 
+              onClick={() => setVerifyStep(0)} 
+              className="w-full mt-4 py-3 font-bold text-[15px] opacity-70 hover:opacity-100 transition-opacity"
+              style={{ color: T?.text }}
+            >
+              Maybe Later
+            </button>
+          </div>
         </div>
       )}
     </div>
