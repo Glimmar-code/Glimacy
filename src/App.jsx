@@ -1,12 +1,36 @@
 /**
- * App.jsx  — Glimacy v2 (Full Rewrite)
- * Colors: BLACK · DEEP PURPLE · WHITE  (Spotify feel — zero light-purple/pink)
- * Header: Search · Feedback · Settings · Messages  (4 top-right icons)
+ * App.jsx  — Glimacy v3 (Adjustment Pass)
+ * Colors: pure BLACK background · DARK PURPLE verified badges · PINK + WHITE
+ *         secondary accents · WHITE text. Primary brand action color stays
+ *         the brighter DEEP PURPLE so buttons/links remain readable on black.
+ * Header: Search · Feedback · Settings · Messages — the leading avatar slot
+ *         morphs into a Back arrow whenever you're not at the root of a tab,
+ *         see the navigation-stack section below.
  * Verified:
  *   — Blue  tick : existing token/card flow (Premium/Pro)
  *   — White tick : ₦2,500 OR 10,000 tokens  +  20 verified followers  +  50 posts
- * All posts are public & appear on the creator's profile (posts / liked / saved)
- * handleSaveProfile: full upsert to Supabase profiles table
+ *   — Both render in DARK PURPLE now (tier is communicated by label/ring, not hue)
+ * Posts: handleCreatePost below is the SINGLE place posts get persisted —
+ *        verified users upsert to Supabase + go public; unverified users are
+ *        saved to IndexedDB (this device only) and reloaded on every refresh,
+ *        and either way the post immediately shows in the Home feed AND on
+ *        the author's own Profile (Profile.jsx reads from the same feedPosts
+ *        array), which is what "make a post → it should be public + show on
+ *        my profile" needed.
+ * Navigation: a real back-stack (navStack) + the browser History API so the
+ *        back arrow / hardware back button steps Profile → Search → Home
+ *        instead of jumping straight to Home. Switching a bottom-tab resets
+ *        the stack to that tab's root; drilling into a profile/search/
+ *        messages pushes onto it.
+ * Chrome visibility: the top header + bottom tab bar hide on Messages and on
+ *        any profile (own or someone else's), and slide fully off-screen
+ *        (not just fade) on scroll-down in Home, X/Twitter-style.
+ * Swipe: dragging left/right on Home/Connect/Ranking/Notifs/Ads moves you
+ *        through the bottom-nav order with a live rubber-band follow and a
+ *        WhatsApp-style snap-back when the drag doesn't clear the threshold.
+ * handleSaveProfile: full upsert to Supabase profiles table, now also
+ *        uploads the avatar/cover File objects EditProfileModal hands back,
+ *        and includes the new public email field.
  * Season Rewards section in Ranking (cash prizes — coming soon banner)
  */
 
@@ -20,13 +44,13 @@ import {
   Plus, Flame, RefreshCw, Image as ImageIcon, Type as TypeIcon,
   Megaphone, CreditCard, PlayCircle, CheckCircle2, Zap, Target,
   TrendingUp, UserCheck2, Radio, MessageSquare, Settings, Gift,
+  ChevronLeft, LogOut, BellRing, BellOff, Mail,
 } from "lucide-react";
 
 import { Avatar }                                    from "./components/ui/Avatar";
 import { ActionBtn }                                 from "./components/ui/ActionBtn";
 import { VerifiedBadge, Tag, EmptyState, ActionBadgeBtn } from "./components/ui/Shared";
 import Login                                         from "./components/ui/Login";
-import Header                                        from "./components/ui/Header";
 import { supabase }                                  from "./services/supabaseClient";
 import EditProfileModal                              from "./components/features/Profile/EditProfileModal";
 import CreatePostModal, { CreatePostFAB }            from "./components/ui/CreatePostModal";
@@ -37,16 +61,27 @@ import LeaderboardHeader                             from "./components/features
 import MessagesView                                  from "./components/features/Messages/MessagesView";
 import ProfileView                                   from "./components/features/Profile/Profile";
 
-// ─── BRAND: BLACK · DEEP PURPLE · WHITE  ─────────────────────────────────────
-export const PURPLE       = "#7C3AED";   // deep purple (primary accent)
+// ─── BRAND: BLACK · DEEP PURPLE (primary) · DARK PURPLE (badges) · PINK (secondary) · WHITE ──
+export const PURPLE       = "#7C3AED";   // deep purple — primary brand accent (buttons, active states)
 export const PURPLE_DIM   = "rgba(124,58,237,0.14)";
 export const PURPLE_BD    = "rgba(124,58,237,0.32)";
 export const PURPLE_GLOW  = "rgba(124,58,237,0.50)";
-export const BLACK        = "#000000";
-export const OFF_BLACK    = "#0A0012";   // near-black with subtle purple hint
-export const CARD_BLACK   = "#110020";   // card surface
+
+export const DARK_PURPLE      = "#3B0764";  // verified-badge color (both Blue & White tiers render here)
+export const DARK_PURPLE_DIM  = "rgba(59,7,100,0.30)";
+export const DARK_PURPLE_BD   = "rgba(124,58,237,0.45)";
+export const DARK_PURPLE_GLOW = "rgba(124,58,237,0.65)";
+
+export const PINK          = "#FF4FA3";  // secondary accent — likes, highlights, status dots
+export const PINK_DIM      = "rgba(255,79,163,0.14)";
+export const PINK_BD       = "rgba(255,79,163,0.34)";
+export const PINK_GLOW     = "rgba(255,79,163,0.55)";
+
+export const BLACK        = "#000000";   // true black — app background, as requested
+export const OFF_BLACK    = "#000000";
+export const CARD_BLACK   = "#0D0710";   // barely-lifted surface so cards still read against black
 export const WHITE        = "#FFFFFF";
-export const OFF_WHITE    = "#EDE8FF";   // slightly warm white for text
+export const OFF_WHITE    = "#FFFFFF";   // primary text is pure white now
 
 // Kept as GOLD aliases so existing imports don't break
 export const GOLD         = PURPLE;
@@ -64,7 +99,7 @@ export const accentGlow   = () => PURPLE_GLOW;
 export const C = {
   gold: PURPLE, goldBright: GOLD_BRIGHT, goldGlow: PURPLE_GLOW,
   silver: "#C0C0C0", bronze: "#CD7F32",
-  online: "#22c55e", danger: "#ef4444", pink: "#ef4444",
+  online: "#22c55e", danger: "#ef4444", pink: PINK,
   facebook: "#1877F2",
 };
 
@@ -83,16 +118,18 @@ export const TOKEN_ECONOMY = {
 const THEMES = {
   glimacy: {
     id: "glimacy", label: "Dark Mode",
-    bg: OFF_BLACK, surface: CARD_BLACK,
+    bg: BLACK, surface: CARD_BLACK,
     cardBg: "rgba(124,58,237,0.07)",
     cardBorder: PURPLE_BD,
-    cardShadow: "0 4px 32px rgba(0,0,0,0.75),inset 0 1px 0 rgba(124,58,237,0.08)",
-    text: OFF_WHITE, muted: "#7B6E99", mutedMid: "#A089C8",
+    cardShadow: "0 4px 32px rgba(0,0,0,0.85),inset 0 1px 0 rgba(124,58,237,0.08)",
+    text: WHITE, muted: "#9C8FB8", mutedMid: "#B8ACDA",
     inputBg: "rgba(124,58,237,0.09)", inputBorder: "rgba(124,58,237,0.22)",
-    pillBorder: "rgba(124,58,237,0.14)", divider: "rgba(124,58,237,0.12)",
+    pillBorder: "rgba(124,58,237,0.14)", divider: "rgba(124,58,237,0.14)",
     hoverBg: "rgba(124,58,237,0.10)", sentBg: PURPLE, sentText: "#fff",
-    recvBg: "rgba(255,255,255,0.06)", recvText: OFF_WHITE,
-    coverGrad: `linear-gradient(135deg,${OFF_BLACK},#1A0030,${OFF_BLACK})`,
+    recvBg: "rgba(255,255,255,0.06)", recvText: WHITE,
+    coverGrad: `linear-gradient(135deg,${BLACK},#1A0030,${BLACK})`,
+    accent: PURPLE, secondary: PINK, secondaryDim: PINK_DIM, secondaryBd: PINK_BD,
+    badge: DARK_PURPLE, badgeDim: DARK_PURPLE_DIM, badgeBd: DARK_PURPLE_BD,
     isDark: true,
   },
   light: {
@@ -107,6 +144,8 @@ const THEMES = {
     hoverBg: "rgba(124,58,237,0.06)", sentBg: PURPLE, sentText: "#fff",
     recvBg: "rgba(0,0,0,0.05)", recvText: "#0A0012",
     coverGrad: "linear-gradient(135deg,#F0EEFF,#DDD4FF,#F0EEFF)",
+    accent: PURPLE, secondary: PINK, secondaryDim: PINK_DIM, secondaryBd: PINK_BD,
+    badge: DARK_PURPLE, badgeDim: DARK_PURPLE_DIM, badgeBd: DARK_PURPLE_BD,
     isDark: false,
   },
 };
@@ -134,6 +173,8 @@ const MOCK_USER = {
   isOnline: true, lastSeen: null,
   relationshipStatus: "Single",
   phone: "8012345678",
+  email: "",            // shown publicly on profile when set — see Edit Profile
+  emailPublic: true,
   website: "https://glimacy.com",
   hobby: "I love coding and building things",
   seed: "GD", avatarUrl: null, coverUrl: null,
@@ -233,6 +274,71 @@ const saveLS = (key, value) => {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 };
 
+// ─── IndexedDB — local-only post drafts for unverified users ────────────────
+// Why: an unverified user's posts must keep showing on THIS device (Home +
+// their own Profile) across refreshes, without ever reaching Supabase. A
+// plain JS object in React state disappears on reload, so we mirror it here.
+const IDB_NAME = "glimacy_local_drafts";
+const IDB_STORE = "posts";
+const openLocalDraftsDB = () => new Promise((resolve, reject) => {
+  if (typeof indexedDB === "undefined") { reject(new Error("indexedDB unavailable")); return; }
+  const req = indexedDB.open(IDB_NAME, 1);
+  req.onupgradeneeded = () => {
+    const db = req.result;
+    if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE, { keyPath: "id" });
+  };
+  req.onsuccess = () => resolve(req.result);
+  req.onerror   = () => reject(req.error);
+});
+const idbAddLocalPost = async (post) => {
+  try {
+    const db = await openLocalDraftsDB();
+    await new Promise((res, rej) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).put(post);
+      tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+    });
+  } catch (err) { console.error("idbAddLocalPost failed:", err); }
+};
+const idbDeleteLocalPost = async (id) => {
+  try {
+    const db = await openLocalDraftsDB();
+    await new Promise((res, rej) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).delete(id);
+      tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+    });
+  } catch (err) { console.error("idbDeleteLocalPost failed:", err); }
+};
+const idbGetAllLocalPosts = async () => {
+  try {
+    const db = await openLocalDraftsDB();
+    return await new Promise((res, rej) => {
+      const tx = db.transaction(IDB_STORE, "readonly");
+      const req = tx.objectStore(IDB_STORE).getAll();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror   = () => rej(req.error);
+    });
+  } catch { return []; }
+};
+
+// ─── Supabase Storage — upload a File, fall back to its local blob/data URL
+//     if storage isn't reachable (so the UI never breaks in dev) ────────────
+const uploadToStorage = async (bucket, file, pathPrefix, fallbackUrl) => {
+  if (!file) return fallbackUrl || null;
+  try {
+    const ext  = (file.name?.split(".").pop() || "jpg").toLowerCase();
+    const path = `${pathPrefix}/${uid("f")}.${ext}`;
+    const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
+    if (error) throw error;
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+    return data?.publicUrl || fallbackUrl || null;
+  } catch (err) {
+    console.error(`Storage upload to "${bucket}" failed, keeping local preview:`, err?.message || err);
+    return fallbackUrl || null;
+  }
+};
+
 let _uidN = 0;
 const uid = (prefix = "id") => `${prefix}_${Date.now()}_${_uidN++}`;
 const STATUS_TTL_MS     = 24 * 60 * 60 * 1000;
@@ -261,7 +367,7 @@ const timeAgo = (ts) => {
   return `${Math.floor(hrs / 24)}d ago`;
 };
 
-// ─── VERIFIED BADGE (Blue or White) ──────────────────────────────────────────
+// ─── VERIFIED BADGE (Blue or White tier — both render DARK PURPLE) ───────────
 export const GlimacyBadge = ({ type = "blue", size = 15 }) => {
   const isWhite = type === "white";
   return (
@@ -269,14 +375,13 @@ export const GlimacyBadge = ({ type = "blue", size = 15 }) => {
       title={isWhite ? "White Verified — Campus Elite" : "Blue Verified — Premium/Pro"}
       style={{
         width: size, height: size, borderRadius: "50%", flexShrink: 0,
-        background: isWhite
-          ? "linear-gradient(135deg,#ffffff,#ddd)"
-          : `linear-gradient(135deg,${PURPLE},#3B0090)`,
+        background: `linear-gradient(135deg,${DARK_PURPLE},#1A0330)`,
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: size * 0.55, color: isWhite ? "#333" : "#fff", fontWeight: 900,
+        fontSize: size * 0.55, color: WHITE, fontWeight: 900,
+        border: isWhite ? `1.4px solid ${WHITE}` : "none",
         boxShadow: isWhite
-          ? "0 0 7px rgba(255,255,255,0.55)"
-          : `0 0 7px ${PURPLE_GLOW}`,
+          ? `0 0 7px ${DARK_PURPLE_GLOW}, 0 0 0 1px rgba(255,255,255,0.25)`
+          : `0 0 7px ${DARK_PURPLE_GLOW}`,
       }}
     >✓</div>
   );
@@ -1087,11 +1192,26 @@ const VideoPostCard = ({ T, post, allPosts, setAllPosts, onViewProfile, onPoints
   );
 };
 
-// ─── SETTINGS PANEL ──────────────────────────────────────────────────────────
-const SettingsPanel = ({ T, open, onClose, themeMode, setThemeMode, onSignOut, onFeedback }) => {
+// ─── SETTINGS PANEL — Theme · Notification Settings · Font Size · Log Out ───
+const Switch = ({ on, onToggle, T }) => (
+  <div
+    onClick={onToggle}
+    style={{
+      width: 40, height: 24, borderRadius: 99, cursor: "pointer", flexShrink: 0,
+      background: on ? PURPLE : T.inputBg, border: `1px solid ${on ? PURPLE_BD : T.inputBorder}`,
+      position: "relative", transition: "background 0.2s ease, border-color 0.2s ease",
+    }}
+  >
+    <div style={{
+      position: "absolute", top: 2, left: on ? 18 : 2, width: 18, height: 18, borderRadius: "50%",
+      background: WHITE, transition: "left 0.2s cubic-bezier(.34,1.56,.64,1)",
+      boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
+    }}/>
+  </div>
+);
+
+const SettingsPanel = ({ T, open, onClose, themeMode, setThemeMode, onSignOut, notifPrefs, setNotifPrefs, fontScale, setFontScale }) => {
   const [section, setSection] = useState(null);
-  const [feedbackText, setFeedbackText] = useState("");
-  const [feedbackSent, setFeedbackSent] = useState(false);
   useEffect(() => { if (!open) setSection(null); }, [open]);
   if (!open) return null;
 
@@ -1100,20 +1220,21 @@ const SettingsPanel = ({ T, open, onClose, themeMode, setThemeMode, onSignOut, o
     { id:"dark",   label:"Dark Mode",            icon:Moon,    desc:"Black & Purple — current"    },
     { id:"light",  label:"Light Mode",           icon:Sun,     desc:"Clean & bright"              },
   ];
+  const notifOptions = [
+    { id:"likesComments", label:"Likes & Comments",  desc:"Someone reacts to or comments on your posts" },
+    { id:"newFollowers",  label:"New Followers",     desc:"Someone starts following you" },
+    { id:"messages",      label:"Messages",          desc:"New direct messages" },
+    { id:"mentions",      label:"Mentions & Tags",   desc:"Someone mentions you in a post or comment" },
+  ];
+  const fontOptions = [
+    { id:"small",  label:"Small",  scale:0.92, sample:13 },
+    { id:"medium", label:"Medium", scale:1,    sample:16 },
+    { id:"large",  label:"Large",  scale:1.14, sample:19 },
+  ];
   const rowStyle = (danger = false) => ({
     display:"flex", alignItems:"center", gap:12, padding:"14px 20px", cursor:"pointer",
     color: danger ? "#ef4444" : T.text, fontSize:14, borderBottom:`1px solid ${T.divider}`, transition:"background 0.15s",
   });
-  const sendFeedback = () => {
-    if (!feedbackText.trim()) return;
-    // In production: send to Supabase or email
-    const subject = encodeURIComponent("Glimacy App Feedback");
-    const body    = encodeURIComponent(feedbackText.trim());
-    window.open(`mailto:therealglimmar@gmail.com?subject=${subject}&body=${body}`, "_blank");
-    setFeedbackSent(true);
-    setFeedbackText("");
-    setTimeout(() => setFeedbackSent(false), 3000);
-  };
 
   return (
     <div style={{ position:"fixed", inset:0, zIndex:100, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", flexDirection:"column", justifyContent:"flex-end", animation:"overlayFadeIn 0.2s ease" }} onClick={e => { if (e.target===e.currentTarget) onClose(); }}>
@@ -1122,7 +1243,7 @@ const SettingsPanel = ({ T, open, onClose, themeMode, setThemeMode, onSignOut, o
         <div style={{ display:"flex", alignItems:"center", padding:"16px 20px 8px", gap:10 }}>
           {section && <ArrowLeft size={18} color={PURPLE} style={{ cursor:"pointer" }} onClick={() => setSection(null)}/>}
           <div style={{ fontWeight:700, fontSize:17, color:T.text }}>
-            {section==="theme" ? "Choose Theme" : section==="feedback" ? "Send Feedback" : "Settings"}
+            {section==="theme" ? "Choose Theme" : section==="notifs" ? "Notification Settings" : section==="font" ? "Font Size" : "Settings"}
           </div>
         </div>
 
@@ -1133,14 +1254,19 @@ const SettingsPanel = ({ T, open, onClose, themeMode, setThemeMode, onSignOut, o
               <div style={{ flex:1 }}><div style={{ fontWeight:600 }}>Theme</div><div style={{ fontSize:11, color:T.muted, marginTop:1 }}>{themeOptions.find(t=>t.id===themeMode)?.label||"Dark Mode"}</div></div>
               <ChevronRight size={16} color={T.muted}/>
             </div>
-            <div style={rowStyle()} onMouseOver={e=>e.currentTarget.style.background=T.hoverBg} onMouseOut={e=>e.currentTarget.style.background="transparent"} onClick={() => setSection("feedback")}>
-              <div style={{ width:36, height:36, borderRadius:10, background:PURPLE_DIM, display:"flex", alignItems:"center", justifyContent:"center" }}><MessageSquare size={17} color={PURPLE}/></div>
-              <div style={{ flex:1 }}><div style={{ fontWeight:600 }}>Send Feedback</div><div style={{ fontSize:11, color:T.muted, marginTop:1 }}>Report a bug or suggest a feature</div></div>
+            <div style={rowStyle()} onMouseOver={e=>e.currentTarget.style.background=T.hoverBg} onMouseOut={e=>e.currentTarget.style.background="transparent"} onClick={() => setSection("notifs")}>
+              <div style={{ width:36, height:36, borderRadius:10, background:PURPLE_DIM, display:"flex", alignItems:"center", justifyContent:"center" }}><BellRing size={17} color={PURPLE}/></div>
+              <div style={{ flex:1 }}><div style={{ fontWeight:600 }}>Notification Settings</div><div style={{ fontSize:11, color:T.muted, marginTop:1 }}>Choose what you get notified about</div></div>
+              <ChevronRight size={16} color={T.muted}/>
+            </div>
+            <div style={rowStyle()} onMouseOver={e=>e.currentTarget.style.background=T.hoverBg} onMouseOut={e=>e.currentTarget.style.background="transparent"} onClick={() => setSection("font")}>
+              <div style={{ width:36, height:36, borderRadius:10, background:PURPLE_DIM, display:"flex", alignItems:"center", justifyContent:"center" }}><TypeIcon size={17} color={PURPLE}/></div>
+              <div style={{ flex:1 }}><div style={{ fontWeight:600 }}>Font Size</div><div style={{ fontSize:11, color:T.muted, marginTop:1 }}>{fontOptions.find(f=>f.scale===fontScale)?.label || "Medium"}</div></div>
               <ChevronRight size={16} color={T.muted}/>
             </div>
             <div style={{ height:8, background:T.isDark?"rgba(255,255,255,0.02)":"rgba(0,0,0,0.03)", margin:"8px 0" }}/>
             <div style={rowStyle(true)} onMouseOver={e=>e.currentTarget.style.background=T.hoverBg} onMouseOut={e=>e.currentTarget.style.background="transparent"} onClick={() => { onSignOut(); onClose(); }}>
-              <div style={{ width:36, height:36, borderRadius:10, background:"rgba(239,68,68,0.10)", display:"flex", alignItems:"center", justifyContent:"center" }}><ArrowLeft size={17} color="#ef4444"/></div>
+              <div style={{ width:36, height:36, borderRadius:10, background:"rgba(239,68,68,0.10)", display:"flex", alignItems:"center", justifyContent:"center" }}><LogOut size={17} color="#ef4444"/></div>
               <div style={{ fontWeight:600 }}>Log Out</div>
             </div>
           </>
@@ -1161,24 +1287,89 @@ const SettingsPanel = ({ T, open, onClose, themeMode, setThemeMode, onSignOut, o
           </div>
         )}
 
-        {section==="feedback" && (
-          <div style={{ padding:"8px 20px 0" }}>
-            <p style={{ fontSize:13, color:T.muted, marginBottom:12 }}>Your feedback goes directly to the Glimacy admin (Glimacy).</p>
-            {feedbackSent ? (
-              <div style={{ background:PURPLE_DIM, border:`1px solid ${PURPLE_BD}`, borderRadius:12, padding:"16px", textAlign:"center" }}>
-                <div style={{ fontSize:28, marginBottom:6 }}>✅</div>
-                <div style={{ fontWeight:700, color:T.text }}>Feedback sent! Thank you.</div>
-              </div>
-            ) : (
-              <>
-                <textarea value={feedbackText} onChange={e=>setFeedbackText(e.target.value)} placeholder="Describe your feedback, bug, or feature request..." rows={4} style={{ width:"100%", background:T.inputBg, border:`1px solid ${PURPLE_BD}`, borderRadius:12, padding:"12px 14px", color:T.text, outline:"none", fontSize:13, resize:"none", fontFamily:"inherit" }}/>
-                <button onClick={sendFeedback} disabled={!feedbackText.trim()} style={{ width:"100%", marginTop:10, padding:13, borderRadius:12, border:"none", background:feedbackText.trim()?PURPLE:T.inputBg, color:feedbackText.trim()?WHITE:T.muted, fontWeight:700, fontSize:14, cursor:feedbackText.trim()?"pointer":"default" }}>
-                  Send to Admin
-                </button>
-              </>
-            )}
+        {section==="notifs" && (
+          <div style={{ padding:"4px 20px 4px" }}>
+            <p style={{ fontSize:12.5, color:T.muted, margin:"6px 0 14px", lineHeight:1.5 }}>Choose what Glimacy is allowed to notify you about. You can change this anytime.</p>
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              {notifOptions.map(opt => (
+                <div key={opt.id} style={{ display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:600, fontSize:13.5, color:T.text }}>{opt.label}</div>
+                    <div style={{ fontSize:11, color:T.muted, marginTop:1 }}>{opt.desc}</div>
+                  </div>
+                  <Switch T={T} on={notifPrefs[opt.id] !== false} onToggle={() => setNotifPrefs(prev => ({ ...prev, [opt.id]: prev[opt.id] === false ? true : false }))}/>
+                </div>
+              ))}
+            </div>
           </div>
         )}
+
+        {section==="font" && (
+          <div style={{ padding:"8px 0" }}>
+            {fontOptions.map(opt => {
+              const selected = fontScale === opt.scale;
+              return (
+                <div key={opt.id} style={{ ...rowStyle(), background:selected?PURPLE_DIM:"transparent" }} onClick={() => setFontScale(opt.scale)} onMouseOver={e=>!selected&&(e.currentTarget.style.background=T.hoverBg)} onMouseOut={e=>!selected&&(e.currentTarget.style.background=selected?PURPLE_DIM:"transparent")}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:selected?PURPLE_DIM:T.inputBg, display:"flex", alignItems:"center", justifyContent:"center", border:selected?`1px solid ${PURPLE_BD}`:"none" }}>
+                    <span style={{ fontSize:opt.sample, fontWeight:800, color:selected?PURPLE:T.muted }}>A</span>
+                  </div>
+                  <div style={{ flex:1 }}><div style={{ fontWeight:selected?700:500, color:selected?PURPLE:T.text }}>{opt.label}</div></div>
+                  {selected && <div style={{ width:8, height:8, borderRadius:"50%", background:PURPLE }}/>}
+                </div>
+              );
+            })}
+            <p style={{ fontSize:11, color:T.muted, padding:"12px 20px 0", lineHeight:1.5 }}>Scales text and spacing across the whole app.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── FEEDBACK PANEL — separate from Settings, only feedback lives here ───────
+const FeedbackPanel = ({ T, open, onClose }) => {
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  useEffect(() => { if (!open) { setFeedbackText(""); setFeedbackSent(false); } }, [open]);
+  if (!open) return null;
+
+  const sendFeedback = () => {
+    if (!feedbackText.trim()) return;
+    const subject = encodeURIComponent("Glimacy App Feedback");
+    const body    = encodeURIComponent(feedbackText.trim());
+    window.open(`mailto:therealglimmar@gmail.com?subject=${subject}&body=${body}`, "_blank");
+    setFeedbackSent(true);
+    setFeedbackText("");
+    setTimeout(() => { setFeedbackSent(false); onClose(); }, 1600);
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:100, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", flexDirection:"column", justifyContent:"flex-end", animation:"overlayFadeIn 0.2s ease" }} onClick={e => { if (e.target===e.currentTarget) onClose(); }}>
+      <div style={{ background:T.isDark?"#0A0012":"#fff", borderRadius:"20px 20px 0 0", padding:"0 0 28px", border:`1px solid ${T.divider}`, boxShadow:"0 -8px 40px rgba(0,0,0,0.5)", animation:"modalSlideUp 0.25s ease" }}>
+        <div style={{ width:36, height:4, background:PURPLE_DIM, borderRadius:2, margin:"12px auto 0" }}/>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px 8px" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <MessageSquare size={18} color={PURPLE}/>
+            <div style={{ fontWeight:700, fontSize:17, color:T.text }}>Send Feedback</div>
+          </div>
+          <X size={18} color={T.muted} style={{ cursor:"pointer" }} onClick={onClose}/>
+        </div>
+        <div style={{ padding:"4px 20px 0" }}>
+          <p style={{ fontSize:13, color:T.muted, marginBottom:12 }}>Your feedback goes directly to the Glimacy admin (Glimacy).</p>
+          {feedbackSent ? (
+            <div style={{ background:PURPLE_DIM, border:`1px solid ${PURPLE_BD}`, borderRadius:12, padding:"16px", textAlign:"center" }}>
+              <div style={{ fontSize:28, marginBottom:6 }}>✅</div>
+              <div style={{ fontWeight:700, color:T.text }}>Feedback sent! Thank you.</div>
+            </div>
+          ) : (
+            <>
+              <textarea autoFocus value={feedbackText} onChange={e=>setFeedbackText(e.target.value)} placeholder="Describe your feedback, bug, or feature request..." rows={4} style={{ width:"100%", background:T.inputBg, border:`1px solid ${PURPLE_BD}`, borderRadius:12, padding:"12px 14px", color:T.text, outline:"none", fontSize:13, resize:"none", fontFamily:"inherit" }}/>
+              <button onClick={sendFeedback} disabled={!feedbackText.trim()} style={{ width:"100%", marginTop:10, padding:13, borderRadius:12, border:"none", background:feedbackText.trim()?PURPLE:T.inputBg, color:feedbackText.trim()?WHITE:T.muted, fontWeight:700, fontSize:14, cursor:feedbackText.trim()?"pointer":"default" }}>
+                Send to Admin
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
